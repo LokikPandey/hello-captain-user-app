@@ -1,0 +1,87 @@
+{
+	"project_info": {
+		"project_number": "1054776721386",
+		"firebase_url": "https://hello-captain-2cec6-default-rtdb.asia-southeast1.firebasedatabase.app",
+		"project_id": "hello-captain-2cec6",
+		"storage_bucket": "hello-captain-2cec6.firebasestorage.app"
+	},
+	"client": [
+		{
+			"client_info": {
+				"mobilesdk_app_id": "1:1054776721386:android:3044a4ced4fad3cea77c93",
+				"android_client_info": {
+					"package_name": "com.hellocaptain.customer"
+				}
+			},
+			"oauth_client": [],
+			"api_key": [
+				{
+					"current_key": "AIzaSyBEcpX9t5Ton_a6ZL6_fxea-ArGd6xiNaw"
+				}
+			],
+			"services": {
+				"appinvite_service": {
+					"other_platform_oauth_client": []
+				}
+			}
+		},
+		{
+			"client_info": {
+				"mobilesdk_app_id": "1:1054776721386:android:54ee4f4aaebfadd2a77c93",
+				"android_client_info": {
+					"package_name": "com.hellocaptain.rider"
+				}
+			},
+			"oauth_client": [],
+			"api_key": [
+				{
+					"current_key": "AIzaSyBEcpX9t5Ton_a6ZL6_fxea-ArGd6xiNaw"
+				}
+			],
+			"services": {
+				"appinvite_service": {
+					"other_platform_oauth_client": []
+				}
+			}
+		},
+		{
+			"client_info": {
+				"mobilesdk_app_id": "1:1054776721386:android:fab76b853e080e97a77c93",
+				"android_client_info": {
+					"package_name": "com.hellocaptain.shop"
+				}
+			},
+			"oauth_client": [],
+			"api_key": [
+				{
+					"current_key": "AIzaSyBEcpX9t5Ton_a6ZL6_fxea-ArGd6xiNaw"
+				}
+			],
+			"services": {
+				"appinvite_service": {
+					"other_platform_oauth_client": []
+				}
+			}
+		},
+		{
+			"client_info": {
+				"mobilesdk_app_id": "1:1054776721386:android:999f5ea45757bdc6a77c93",
+				"android_client_info": {
+					"package_name": "com.hellocaptain.user"
+				}
+			},
+			"oauth_client": [],
+			"api_key": [
+				{
+					"current_key": "AIzaSyBEcpX9t5Ton_a6ZL6_fxea-ArGd6xiNaw"
+				}
+			],
+			"services": {
+				"appinvite_service": {
+					"other_platform_oauth_client": []
+				}
+			}
+		}
+	],
+	"configuration_version": "1"
+}

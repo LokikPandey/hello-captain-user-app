@@ -54,3 +54,4 @@ final Map<String, Color> statusColorMap = {
   "Complete": StatusText.success,
   "Cancel": StatusText.danger,
 };
+

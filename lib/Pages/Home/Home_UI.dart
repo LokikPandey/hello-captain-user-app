@@ -19,6 +19,8 @@ import 'package:hello_captain_user/Resources/app_config.dart';
 import 'package:hello_captain_user/Resources/colors.dart';
 import 'package:hello_captain_user/Resources/commons.dart';
 import 'package:hello_captain_user/Resources/constants.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'dart:developer';
 import 'package:simple_shadow/simple_shadow.dart';
 import 'package:skeletonizer/skeletonizer.dart';
 
@@ -57,18 +59,18 @@ class _Home_UIState extends ConsumerState<Home_UI> {
       onRefresh: _refresh,
       child: KScaffold(
         appBar: AppBar(
-          surfaceTintColor: Kolor.scaffold,
+          surfaceTintColor: const Color.fromARGB(255, 255, 242, 220),
           automaticallyImplyLeading: false,
           // title: CircleAvatar(
           //   backgroundImage: AssetImage("$kImagePath/logo.png"),
           //   backgroundColor: Kolor.scaffold,
           // ),
           title: Image.asset(
-            "$kImagePath/syslogo.png",
-            height: 30, // adjust as needed
+            "$kImagePath/h_c_logoo.png",
+            height: 200, // adjust as needed
             fit: BoxFit.contain,
           ),
-          backgroundColor: Kolor.scaffold,
+          backgroundColor: Color(0xFFFFF5E5),
           actions: [
             Icon(Icons.account_balance_wallet_outlined),
             width5,
@@ -89,59 +91,140 @@ class _Home_UIState extends ConsumerState<Home_UI> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                // ... existing code before homeData.when
                 homeData.when(
                   data:
-                      (data) => KCarousel(
-                        isLooped: true,
-                        children:
-                            (data["slider"] as List)
-                                .map(
-                                  (e) => GestureDetector(
-                                    onTap: () {
-                                      String path = "";
-                                      switch (e['title']) {
-                                        case "Passenger Transportation":
-                                          path = "/passenger-transportation";
-                                          break;
+                      (data) => Container(
+                        // Outer Container to hold the background
+                        decoration: const BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [
+                              Color(0xFFFFFAF0), // Light pastel background
+                              Color.fromARGB(255, 255, 242, 220),
+                            ],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 8,
+                          ),
+                          child: ClipRRect(
+                            // Removed the inner Container and its decoration
+                            borderRadius: const BorderRadius.all(
+                              Radius.circular(16),
+                            ),
+                            child: SizedBox(
+                              height: 200,
+                              child: KCarousel(
+                                isLooped: true,
+                                showIndicator: false,
+                                children:
+                                    (data["slider"] as List)
+                                        .map(
+                                          (e) => GestureDetector(
+                                            onTap: () async {
+                                              try {
+                                                final promotionType =
+                                                    e['promotion_type']
+                                                        ?.toString();
+                                                final hardcodedUrl =
+                                                    'http://dynamic-link-two.vercel.app';
 
-                                        case "Rental":
-                                          path = "/rental";
-                                          break;
+                                                if (promotionType ==
+                                                    'service') {
+                                                  final title =
+                                                      e['title']?.toString() ??
+                                                      '';
+                                                  final service =
+                                                      e['service']
+                                                          ?.toString() ??
+                                                      '';
+                                                  final icon =
+                                                      e['icon']?.toString() ??
+                                                      '';
 
-                                        case "Shipment":
-                                          path = "/shipment";
-                                          break;
+                                                  String path = "";
+                                                  switch (title) {
+                                                    case "Passenger Transportation":
+                                                      path =
+                                                          "/passenger-transportation";
+                                                      break;
+                                                    case "Rental":
+                                                      path = "/rental";
+                                                      break;
+                                                    case "Shipment":
+                                                      path = "/shipment";
+                                                      break;
+                                                    case "Purchasing Service":
+                                                      path =
+                                                          "/purchasing-service";
+                                                      break;
+                                                    default:
+                                                      log(
+                                                        "Unknown service title: $title",
+                                                      );
+                                                      return;
+                                                  }
 
-                                        case "Purchasing Service":
-                                          path = "/purchasing-service";
-                                          break;
-                                        default:
-                                      }
-                                      context.push(
-                                        path,
-                                        extra: {
-                                          ...e as Map<String, dynamic>,
-                                          "serviceName": e['service'],
-                                          "serviceImage":
-                                              serviceImageBaseUrl + e['icon'],
-                                        },
-                                      );
-                                    },
-
-                                    child: Container(
-                                      decoration: BoxDecoration(
-                                        image: DecorationImage(
-                                          image: NetworkImage(
-                                            "$promoImageBaseUrl/${e["photo"]}",
+                                                  context.push(
+                                                    path,
+                                                    extra: {
+                                                      ...e
+                                                          as Map<
+                                                            String,
+                                                            dynamic
+                                                          >,
+                                                      "serviceName": service,
+                                                      "serviceImage":
+                                                          serviceImageBaseUrl +
+                                                          icon,
+                                                    },
+                                                  );
+                                                } else {
+                                                  final uri = Uri.parse(
+                                                    hardcodedUrl,
+                                                  );
+                                                  if (await canLaunchUrl(uri)) {
+                                                    await launchUrl(
+                                                      uri,
+                                                      mode:
+                                                          LaunchMode
+                                                              .externalApplication,
+                                                    );
+                                                  } else {
+                                                    log(
+                                                      "Could not launch $hardcodedUrl",
+                                                    );
+                                                  }
+                                                }
+                                              } catch (err, stack) {
+                                                log(
+                                                  "Error in onTap: $err\n$stack",
+                                                );
+                                              }
+                                            },
+                                            child: Container(
+                                              decoration: BoxDecoration(
+                                                image: DecorationImage(
+                                                  image: NetworkImage(
+                                                    "$promoImageBaseUrl/${e["photo"]}",
+                                                  ),
+                                                  fit: BoxFit.cover,
+                                                ),
+                                              ),
+                                            ),
                                           ),
-                                          fit: BoxFit.cover,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                )
-                                .toList(),
+                                        )
+                                        .toList(),
+                              ),
+                            ),
+                          ),
+                        ),
                       ),
+
                   error:
                       (error, stackTrace) => SizedBox(
                         child: KCard(
@@ -169,93 +252,127 @@ class _Home_UIState extends ConsumerState<Home_UI> {
                       ),
                   skipLoadingOnRefresh: false,
                 ),
-                kHeight(30),
+                kHeight(0),
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: kPadding,
-                      ).copyWith(bottom: 10),
-                      child: Label("Our Services", fontSize: 16).regular,
-                    ),
-
+                    // Padding(
+                    //   padding: const EdgeInsets.symmetric(
+                    //     horizontal: kPadding,
+                    //   ).copyWith(bottom: 10),
+                    //   child: Label("Our Services", fontSize: 16).regular,
+                    // ),
                     homeData.when(
                       data:
-                          (data) => Stack(
-                            children: [
-                              SingleChildScrollView(
-                                scrollDirection: Axis.horizontal,
-                                padding: EdgeInsets.symmetric(horizontal: 5),
-                                child: Row(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    ...List.generate(5, (index) {
-                                      final category =
-                                          (data["service"] as List)[index];
-                                      return Padding(
-                                        padding: const EdgeInsets.only(
-                                          right: 5,
-                                        ),
-                                        child: SizedBox(
-                                          width: 125,
-                                          height: 125,
-                                          child: CategoryTile(
-                                            index: index,
-                                            data:
-                                                category
-                                                    as Map<String, dynamic>,
-                                            type: category["title"],
-                                            id: "${category["id"]}",
-                                            label: category["service"],
-                                            image:
-                                                "$serviceImageBaseUrl/${category["icon"]}",
-                                          ),
-                                        ),
-                                      );
-                                    }),
-                                    // Keep this part commented for future use
-                                    Padding(
-                                      padding: const EdgeInsets.only(right: 0),
-                                      child: SizedBox(
-                                        // width: 10,
-                                        // height: 10,
-                                        // child: _more(context),
-                                      ),
-                                    ),
-                                  ],
-                                ),
+                          (data) => Container(
+                            decoration: const BoxDecoration(
+                              gradient: LinearGradient(
+                                colors: [Color(0xFFFFFAF0), Color(0xFFFFF2DC)],
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
                               ),
-                              // Scroll indicator overlay (right edge gradient + arrow)
-                              Positioned(
-                                right: 8,
-                                top: 0,
-                                bottom: 0,
-                                child: IgnorePointer(
-                                  child: Container(
-                                    width: 30,
-                                    alignment: Alignment.center,
-                                    child: Container(
-                                      decoration: BoxDecoration(
-                                        color: Color(
-                                          0xFFFF8C00,
-                                        ), // Pirate Orange or adjust to match theme
-                                        shape: BoxShape.circle,
+                            ),
+                            child: SizedBox(
+                              height: 170,
+                              child: Stack(
+                                children: [
+                                  Center(
+                                    child: SingleChildScrollView(
+                                      scrollDirection: Axis.horizontal,
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 5,
                                       ),
-                                      padding: EdgeInsets.all(6),
-                                      child: Icon(
-                                        Icons.arrow_forward_ios_rounded,
-                                        size: 16,
-                                        color:
-                                            Colors
-                                                .white, // Use Colors.black if you prefer dark arrow
-                                        weight: 900,
+                                      child: Row(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.center,
+                                        children: [
+                                          ...List.generate(
+                                            (data["service"] as List)
+                                                .take(5)
+                                                .length,
+                                            (index) {
+                                              final category =
+                                                  (data["service"]
+                                                      as List)[index];
+                                              return Padding(
+                                                padding: const EdgeInsets.only(
+                                                  right: 5,
+                                                ),
+                                                child: SizedBox(
+                                                  width: 125,
+                                                  height: 150,
+                                                  child: CategoryTile(
+                                                    index: index,
+                                                    data:
+                                                        category
+                                                            as Map<
+                                                              String,
+                                                              dynamic
+                                                            >,
+                                                    type: category["title"],
+                                                    id: "${category["id"]}",
+                                                    label: category["service"],
+                                                    image:
+                                                        "$serviceImageBaseUrl/${category["icon"]}",
+                                                  ),
+                                                ),
+                                              );
+                                            },
+                                          ),
+                                          Padding(
+                                            padding: const EdgeInsets.only(
+                                              right: 5,
+                                            ),
+                                            child: Transform.translate(
+                                              offset: Offset(
+                                                0,
+                                                -20,
+                                              ), // Move up by 10 pixels
+                                              child: SizedBox(
+                                                width: 100,
+                                                height: 100,
+                                                child: _more(
+                                                  context,
+                                                ), // ← ADD MORE BUTTON HERE
+                                              ),
+                                            ),
+                                          ),
+                                        ],
                                       ),
                                     ),
                                   ),
-                                ),
+                                  Positioned(
+                                    right: 8,
+                                    top: 0,
+                                    bottom: 40,
+                                    child: IgnorePointer(
+                                      child: Container(
+                                        width: 30,
+                                        alignment: Alignment.center,
+                                        child: Container(
+                                          decoration: const BoxDecoration(
+                                            color: Color.fromARGB(
+                                              213,
+                                              255,
+                                              140,
+                                              0,
+                                            ),
+                                            shape: BoxShape.circle,
+                                          ),
+                                          padding: EdgeInsets.all(6),
+                                          child: Icon(
+                                            Icons.arrow_forward_ios_rounded,
+                                            size: 16,
+                                            color: Colors.white,
+                                            weight: 900,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
                               ),
-                            ],
+                            ),
                           ),
 
                       error:
@@ -359,17 +476,21 @@ class _Home_UIState extends ConsumerState<Home_UI> {
           builder: (context) => catgeoryModal(),
         );
       },
-      margin: EdgeInsets.all(8),
-      height: 120,
+      margin: EdgeInsets.all(10),
+      height: 100,
+      width: 100,
+      radius: 50, // Half of height/width → circle
+      color: Colors.white,
       child: Column(
-        spacing: 10,
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           CircleAvatar(
+            radius: 20,
             backgroundColor: Kolor.scaffold,
-            child: Icon(Icons.keyboard_arrow_down_rounded, size: 20),
+            child: Icon(Icons.keyboard_arrow_down_rounded, size: 30),
           ),
-          Label("More").regular,
+          // SizedBox(height: 2),
+          // Label("More", fontSize: 11).regular,
         ],
       ),
     );

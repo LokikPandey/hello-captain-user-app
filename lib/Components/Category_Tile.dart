@@ -12,6 +12,7 @@ class CategoryTile extends StatelessWidget {
   final String image;
   final String type;
   final Map<String, dynamic> data;
+
   const CategoryTile({
     super.key,
     required this.id,
@@ -31,52 +32,49 @@ class CategoryTile extends StatelessWidget {
           case "Passenger Transportation":
             path = "/passenger-transportation";
             break;
-
           case "Rental":
             path = "/rental";
             break;
-
           case "Shipment":
             path = "/shipment";
             break;
-
           case "Purchasing Service":
             path = "/purchasing-service";
             break;
-          default:
         }
+
         context.push(
           path,
           extra: {...data, "serviceName": label, "serviceImage": image},
         );
       },
-      child: Stack(
-        children: [
-          Container(
-            height: 120,
-            width: double.infinity,
-            margin: EdgeInsets.all(8),
-            padding: const EdgeInsets.all(15),
-            decoration: BoxDecoration(
-              borderRadius: kRadius(15),
-              gradient: LinearGradient(
-                colors: [
-                  Colors.primaries[index % Colors.primaries.length].lighten(),
-                  Colors.primaries[(index + 1) % Colors.primaries.length]
-                      .lighten(),
-                ],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
+      child: SizedBox(
+        width: 110,
+        height: 150, // Enough height to prevent overflow
+        child: Column(
+          children: [
+            Container(
+              height: 100,
+              width: 100,
+              padding: const EdgeInsets.all(15),
+              decoration: const BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: LinearGradient(
+                  colors: [
+                    Color.fromARGB(255, 253, 253, 253), // Very light pastel orange
+                    Color.fromARGB(255, 251, 250, 248), // Soft light orange
+                  ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
               ),
+              child: CachedNetworkImage(imageUrl: image, fit: BoxFit.contain),
             ),
-            child: Label(label).regular,
-          ),
-          Positioned(
-            right: 0,
-            bottom: 0,
-            child: CachedNetworkImage(imageUrl: image, height: 80),
-          ),
-        ],
+
+            const SizedBox(height: 5),
+            Label(label, weight: 700, color: Kolor.primary).regular,
+          ],
+        ),
       ),
     );
   }

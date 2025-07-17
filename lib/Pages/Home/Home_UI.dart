@@ -418,20 +418,34 @@ class _Home_UIState extends ConsumerState<Home_UI> {
                             ],
                           ),
                       loading:
-                          () => GridView.count(
-                            crossAxisCount: 3,
-                            shrinkWrap: true,
-                            padding: EdgeInsets.symmetric(horizontal: 10),
-                            physics: NeverScrollableScrollPhysics(),
-                            children: List.generate(
-                              6,
-                              (index) => Skeletonizer(
-                                child: Skeleton.leaf(
-                                  enabled: true,
-                                  child: KCard(
-                                    margin: EdgeInsets.all(10),
-                                    height: 120,
-                                    width: double.infinity,
+                          () => Container(
+                            decoration: const BoxDecoration(
+                              gradient: LinearGradient(
+                                colors: [
+                                  Color(0xFFFFFAF0), // Light pastel top
+                                  Color(0xFFFFF2DC), // Light pastel bottom
+                                ],
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                              ),
+                            ),
+                            child: GridView.count(
+                              crossAxisCount: 3,
+                              shrinkWrap: true,
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                              ),
+                              physics: const NeverScrollableScrollPhysics(),
+                              children: List.generate(
+                                3,
+                                (index) => Skeletonizer(
+                                  child: Skeleton.leaf(
+                                    enabled: true,
+                                    child: KCard(
+                                      margin: const EdgeInsets.all(10),
+                                      height: 60,
+                                      width: double.infinity,
+                                    ),
                                   ),
                                 ),
                               ),
@@ -442,24 +456,87 @@ class _Home_UIState extends ConsumerState<Home_UI> {
                   ],
                 ),
 
-                height20,
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: kPadding),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Label("Famous Locations in Nepal", fontSize: 16).regular,
-                      TextButton(
-                        onPressed: () => context.push("/all-news"),
-                        child: Label("View All").regular,
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // 🖼️ Insert image here
+                    Container(
+                      decoration: const BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            Color(0xFFFFFAF0), // Light pastel background
+                            Color(0xFFFFF2DC),
+                          ],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
                       ),
-                    ],
-                  ),
-                ),
-                height10,
-                newsSection(),
+                      child: Padding(
+                        padding: const EdgeInsets.only(bottom: 0),
+                        child: Image.asset(
+                          'assets/images/6.png',
+                          width: double.infinity,
+                          height: 50,
+                          fit: BoxFit.cover,
+                        ),
+                      ),
+                    ),
 
-                kHeight(100),
+                    // height10,
+                    Container(
+                      decoration: const BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            Color(0xFFFFFAF0), // Light pastel background
+                            Color(0xFFFFF2DC),
+                          ],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                      ),
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: kPadding,
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Label(
+                              "Famous Locations in Nepal",
+                              fontSize: 16,
+                              color: Color.fromARGB(255, 231, 140, 3),
+                              weight: 900,
+                            ).regular,
+                            TextButton(
+                              onPressed: () => context.push("/all-news"),
+                              child:
+                                  Label(
+                                    "View All",
+                                    color: Color.fromARGB(255, 121, 74, 2),
+                                  ).regular,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+
+                    // height10,
+                    newsSection(),
+
+                    Container(
+                      height: 50,
+                      width: double.infinity,
+                      decoration: const BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [Color(0xFFFFFAF0), Color(0xFFFFF2DC)],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ],
             ),
           ),
@@ -581,49 +658,77 @@ class _Home_UIState extends ConsumerState<Home_UI> {
         final savedNewsData = ref.watch(savedNewsFuture);
         final newsData = ref.watch(allNewsFuture);
         ref.watch(serviceDataFuture);
-        return newsData.when(
-          data:
-              (data) => SingleChildScrollView(
-                padding: EdgeInsets.symmetric(horizontal: kPadding),
-                scrollDirection: Axis.horizontal,
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  spacing: 15,
-                  children:
-                      (data['data'] as List)
-                          .map(
-                            (e) => NewsCard(
-                              data: e,
-                              isSaved: (savedNewsData.value ?? []).any(
-                                (element) => element["news_id"] == e["news_id"],
+
+        return Container(
+          width: double.infinity,
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [Color(0xFFFFFAF0), Color(0xFFFFF2DC)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+          ),
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          child: newsData.when(
+            data:
+                (data) => SingleChildScrollView(
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children:
+                        (data['data'] as List)
+                            .map(
+                              (e) => Padding(
+                                padding: const EdgeInsets.only(right: 12),
+                                child: SizedBox(
+                                  width:
+                                      MediaQuery.of(context).size.width / 2 -
+                                      15, // ~2 cards per screen
+                                  child: NewsCard(
+                                    data: e,
+                                    isSaved: (savedNewsData.value ?? []).any(
+                                      (element) =>
+                                          element["news_id"] == e["news_id"],
+                                    ),
+                                  ),
+                                ),
                               ),
-                            ),
-                          )
-                          .toList(),
+                            )
+                            .toList(),
+                  ),
                 ),
-              ),
-          error:
-              (error, stackTrace) =>
-                  Center(child: kNoData(subtitle: "Unable To Fetch News!")),
-          loading:
-              () => SingleChildScrollView(
-                padding: EdgeInsets.symmetric(horizontal: kPadding),
-                scrollDirection: Axis.horizontal,
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  spacing: 15,
-                  children:
-                      [1, 2]
-                          .map(
-                            (e) => Skeletonizer(
-                              child: Skeleton.leaf(
-                                child: KCard(height: 150, width: 200),
+            error:
+                (error, stackTrace) =>
+                    Center(child: kNoData(subtitle: "Unable To Fetch News!")),
+            loading:
+                () => SingleChildScrollView(
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children:
+                        [1, 2]
+                            .map(
+                              (e) => Padding(
+                                padding: const EdgeInsets.only(right: 12),
+                                child: Skeletonizer(
+                                  child: Skeleton.leaf(
+                                    child: KCard(
+                                      height: 150,
+                                      width:
+                                          MediaQuery.of(context).size.width /
+                                              2 -
+                                          24,
+                                    ),
+                                  ),
+                                ),
                               ),
-                            ),
-                          )
-                          .toList(),
+                            )
+                            .toList(),
+                  ),
                 ),
-              ),
+          ),
         );
       },
     );

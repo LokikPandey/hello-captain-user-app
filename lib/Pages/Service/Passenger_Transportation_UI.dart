@@ -1070,34 +1070,63 @@ class _Passenger_Transportation_UIState
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
         child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             IconButton(
               onPressed: () => context.pop(),
-              icon: Icon(Icons.arrow_back),
+              icon: const Icon(Icons.arrow_back),
             ),
-            SimpleShadow(
-              sigma: 15,
-              color: StatusText.neutral,
-              child: KCard(
-                color: StatusText.neutral,
-                margin: EdgeInsets.only(top: 10),
-                padding: EdgeInsets.symmetric(horizontal: 15, vertical: 7),
-
-                radius: 100,
-                child:
-                    Label(
-                      pickupAddressData == null
-                          ? "Select Pickup"
-                          : dropAddressData == null
-                          ? "Select Drop Address"
-                          : "Confirm Location",
-                      weight: 700,
-                      fontSize: 12,
-                      color: Colors.white,
-                    ).regular,
+            const SizedBox(width: 10),
+            // Search bar (make it slightly less wide)
+            Expanded(
+              child: InkWell(
+                onTap: () async {
+                  if (pickupCoordinates == null) {
+                    final myPos = await LocationService.getCurrentLocation();
+                    if (myPos != null) {
+                      setState(() {
+                        pickupCoordinates = Position(
+                          myPos.longitude,
+                          myPos.latitude,
+                        );
+                        pickupAddressData = {"address": "Current Location"};
+                        if (pickupPoint != null) {
+                          pointManager.delete(pickupPoint!);
+                        }
+                      });
+                    }
+                  }
+                  _searchAndSetLocation("Drop");
+                },
+                child: Container(
+                  height: 45,
+                  padding: const EdgeInsets.symmetric(horizontal: 15),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: Colors.grey.shade300),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.search, color: Colors.grey),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child:
+                            Label(
+                              dropAddressData == null
+                                  ? "Search Drop Location"
+                                  : dropAddressData!["address"],
+                              fontSize: 14,
+                              weight: 500,
+                              color: Colors.black,
+                            ).regular,
+                      ),
+                    ],
+                  ),
+                ),
               ),
             ),
+            const SizedBox(width: 10),
+            // Zoom to location icon
             IconButton(
               onPressed: () async {
                 if (pickupCoordinates != null && dropCoordinates != null) {
@@ -1121,7 +1150,7 @@ class _Passenger_Transportation_UIState
                   setCameraToCoordinates();
                 }
               },
-              icon: Icon(Icons.my_location_rounded),
+              icon: const Icon(Icons.my_location_rounded),
             ),
           ],
         ),
@@ -1159,6 +1188,29 @@ class _Passenger_Transportation_UIState
                     ).regular,
               ),
             ],
+          ),
+          TextButton.icon(
+            onPressed: () async {
+              myPos = await LocationService.getCurrentLocation();
+              if (myPos == null) return;
+
+              setState(() {
+                pickupCoordinates = Position(myPos!.longitude, myPos!.latitude);
+                pickupAddressData = {
+                  "address": "Current Location", // optional placeholder
+                };
+
+                // (optional) reset or create pickupPoint marker if needed
+                if (pickupPoint != null) {
+                  pointManager.delete(pickupPoint!);
+                }
+
+                // optionally center camera
+                setCameraToCoordinates(bounds: pickupCoordinates!);
+              });
+            },
+            icon: Icon(Icons.my_location),
+            label: Text("Use Current Location as Pickup"),
           ),
           height15,
           _pickupDropBtn("Pickup"),
@@ -1314,8 +1366,21 @@ class _Passenger_Transportation_UIState
   KCard _pickupDropBtn(String type) {
     bool isPickup = type == "Pickup";
     return KCard(
-      onTap: () {
-        _searchAndSetLocation(type);
+      onTap: () async {
+        if (type == "Drop" && pickupCoordinates == null) {
+          final myPos = await LocationService.getCurrentLocation();
+          if (myPos != null) {
+            setState(() {
+              pickupCoordinates = Position(myPos.longitude, myPos.latitude);
+              pickupAddressData = {"address": "Current Location"};
+              if (pickupPoint != null) {
+                pointManager.delete(pickupPoint!);
+              }
+            });
+          }
+        }
+
+        _searchAndSetLocation(type); // Now open the search
       },
       borderWidth: 1,
       color: Kolor.scaffold,
@@ -1347,9 +1412,9 @@ class _Passenger_Transportation_UIState
                               pickupAddressData!["address"],
                               fontSize: 15,
                             ).title,
-                            // Label(
-                            //   "${pickupCoordinates!.lat}, ${pickupCoordinates!.lng}",
-                            // ).subtitle,
+                            Label(
+                              "${pickupCoordinates!.lat}, ${pickupCoordinates!.lng}",
+                            ).subtitle,
                           ],
                         ),
               ),
@@ -1374,9 +1439,6 @@ class _Passenger_Transportation_UIState
                               dropAddressData!["address"],
                               fontSize: 15,
                             ).title,
-                            // Label(
-                            //   "${dropCoordinates!.lat}, ${dropCoordinates!.lng}",
-                            // ).subtitle,
                           ],
                         ),
               ),

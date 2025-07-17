@@ -43,88 +43,98 @@ class _Saved_UIState extends ConsumerState<Saved_UI> {
     return KScaffold(
       appBar: KAppBar(context, title: "Saved", showBack: false),
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: EdgeInsets.all(kPadding),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              savedNewsData.when(
-                data:
-                    (data) =>
-                        data.isNotEmpty
-                            ? ListView.separated(
-                              separatorBuilder: (context, index) => height15,
-                              shrinkWrap: true,
-                              itemCount: data.length,
-                              itemBuilder:
-                                  (context, index) => KCard(
-                                    onTap:
-                                        () => context.push(
-                                          "/news-detail/${data[index]['news_id']}",
-                                        ),
-                                    child: Stack(
-                                      alignment: Alignment.topRight,
-                                      children: [
-                                        Column(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
-                                          children: [
-                                            Container(
-                                              width: double.infinity,
-                                              height: 170,
-                                              decoration: BoxDecoration(
-                                                borderRadius: kRadius(10),
-                                                image: DecorationImage(
-                                                  fit: BoxFit.cover,
-                                                  image: NetworkImage(
-                                                    "$newsImageBaseUrl/${data[index]['news_images']}",
+        child: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [Color(0xFFFFFAF0), Color(0xFFFFF2DC)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+          ),
+          child: SingleChildScrollView(
+            padding: EdgeInsets.all(kPadding),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                savedNewsData.when(
+                  data:
+                      (data) =>
+                          data.isNotEmpty
+                              ? ListView.separated(
+                                separatorBuilder: (context, index) => height15,
+                                shrinkWrap: true,
+                                physics: NeverScrollableScrollPhysics(),
+                                itemCount: data.length,
+                                itemBuilder:
+                                    (context, index) => KCard(
+                                      onTap:
+                                          () => context.push(
+                                            "/news-detail/${data[index]['news_id']}",
+                                          ),
+                                      child: Stack(
+                                        alignment: Alignment.topRight,
+                                        children: [
+                                          Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              Container(
+                                                width: double.infinity,
+                                                height: 170,
+                                                decoration: BoxDecoration(
+                                                  borderRadius: kRadius(10),
+                                                  image: DecorationImage(
+                                                    fit: BoxFit.cover,
+                                                    image: NetworkImage(
+                                                      "$newsImageBaseUrl/${data[index]['news_images']}",
+                                                    ),
                                                   ),
                                                 ),
                                               ),
-                                            ),
-                                            height10,
-                                            Label(
-                                              "${data[index]['title']}"
-                                                  .replaceAll(
-                                                    RegExp(r'<[^>]*>'),
-                                                    '',
-                                                  ),
-                                              fontSize: 17,
-                                              maxLines: 1,
-                                            ).title,
-                                            Label(
-                                              "${data[index]['content']}"
-                                                  .replaceAll(
-                                                    RegExp(r'<[^>]*>'),
-                                                    '',
-                                                  ),
-                                              fontSize: 12,
-                                              maxLines: 2,
-                                            ).subtitle,
-                                          ],
-                                        ),
-                                        IconButton(
-                                          onPressed:
-                                              () => removeSaved(
-                                                data[index]["news_id"],
-                                              ),
-                                          icon: Icon(
-                                            Icons.favorite,
-                                            color: Kolor.tertiary,
+                                              height10,
+                                              Label(
+                                                "${data[index]['title']}"
+                                                    .replaceAll(
+                                                      RegExp(r'<[^>]*>'),
+                                                      '',
+                                                    ),
+                                                fontSize: 17,
+                                                maxLines: 1,
+                                              ).title,
+                                              Label(
+                                                "${data[index]['content']}"
+                                                    .replaceAll(
+                                                      RegExp(r'<[^>]*>'),
+                                                      '',
+                                                    ),
+                                                fontSize: 12,
+                                                maxLines: 2,
+                                              ).subtitle,
+                                            ],
                                           ),
-                                        ),
-                                      ],
+                                          IconButton(
+                                            onPressed:
+                                                () => removeSaved(
+                                                  data[index]["news_id"],
+                                                ),
+                                            icon: Icon(
+                                              Icons.favorite,
+                                              color: Kolor.tertiary,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
                                     ),
-                                  ),
-                            )
-                            : kNoData(
-                              title: "No Saved News!",
-                              subtitle: "All saved news will appear here.",
-                            ),
-                error: (error, stackTrace) => kNoData(subtitle: "$error"),
-                loading: () => dummy(),
-              ),
-            ],
+                              )
+                              : kNoData(
+                                title: "No Saved News!",
+                                subtitle: "All saved news will appear here.",
+                              ),
+                  error: (error, stackTrace) => kNoData(subtitle: "$error"),
+                  loading: () => dummy(),
+                ),
+              ],
+            ),
           ),
         ),
       ),

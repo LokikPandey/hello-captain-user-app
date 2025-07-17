@@ -23,56 +23,69 @@ class _Chat_UIState extends ConsumerState<Chat_UI> {
     return KScaffold(
       appBar: KAppBar(context, title: "Chats", showBack: false),
       body: SafeArea(
-        child: StreamBuilder<DatabaseEvent>(
-          stream: FirebaseDatabase.instance.ref('Inbox/${user!.id}').onValue,
-          builder: (context, snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting) {
-              return Center(child: CircularProgressIndicator());
-            }
-            if (!snapshot.hasData || snapshot.data?.snapshot.value == null) {
-              return Center(child: Label("No chats found").regular);
-            }
+        child: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [Color(0xFFFFFAF0), Color(0xFFFFF2DC)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+          ),
+          child: StreamBuilder<DatabaseEvent>(
+            stream: FirebaseDatabase.instance.ref('Inbox/${user!.id}').onValue,
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(child: CircularProgressIndicator());
+              }
+              if (!snapshot.hasData || snapshot.data?.snapshot.value == null) {
+                return Center(child: Label("No chats found").regular);
+              }
 
-            // Convert the snapshot to a Map
-            final data = Map<String, dynamic>.from(
-              snapshot.data!.snapshot.value as Map,
-            );
+              final data = Map<String, dynamic>.from(
+                snapshot.data!.snapshot.value as Map,
+              );
 
-            final entries = data.entries.toList();
+              final entries = data.entries.toList();
 
-            return ListView.separated(
-              separatorBuilder: (context, index) => height10,
-              itemCount: entries.length,
-              padding: EdgeInsets.all(kPadding),
-              itemBuilder: (context, index) {
-                final chat = entries[index].value as Map;
-                return KCard(
-                  onTap:
-                      () => context.push(
-                        "/chat/detail/${chat['rid']}",
-                        extra: {"pic": chat['pic'], "name": chat['name']},
-                      ),
-                  child: Row(
-                    spacing: 15,
-                    children: [
-                      CircleAvatar(backgroundImage: NetworkImage(chat['pic'])),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Label(chat['name'] ?? "User", weight: 700).regular,
-                            if (chat['msg'].isNotEmpty)
-                              Label(chat['msg'], fontSize: 12).subtitle,
-                          ],
+              return ListView.separated(
+                separatorBuilder: (context, index) => height10,
+                itemCount: entries.length,
+                padding: const EdgeInsets.all(kPadding),
+                itemBuilder: (context, index) {
+                  final chat = entries[index].value as Map;
+                  return KCard(
+                    onTap:
+                        () => context.push(
+                          "/chat/detail/${chat['rid']}",
+                          extra: {"pic": chat['pic'], "name": chat['name']},
                         ),
-                      ),
-                      Label(kDateFormat(chat['date'])).subtitle,
-                    ],
-                  ),
-                );
-              },
-            );
-          },
+                    child: Row(
+                      spacing: 15,
+                      children: [
+                        CircleAvatar(
+                          backgroundImage: NetworkImage(chat['pic']),
+                        ),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Label(
+                                chat['name'] ?? "User",
+                                weight: 700,
+                              ).regular,
+                              if (chat['msg'].isNotEmpty)
+                                Label(chat['msg'], fontSize: 12).subtitle,
+                            ],
+                          ),
+                        ),
+                        Label(kDateFormat(chat['date'])).subtitle,
+                      ],
+                    ),
+                  );
+                },
+              );
+            },
+          ),
         ),
       ),
     );

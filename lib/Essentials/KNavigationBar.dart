@@ -15,21 +15,30 @@ class KNavigationBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return KCard(
-      padding: EdgeInsets.symmetric(vertical: 20, horizontal: 5)
-          .copyWith(bottom: 10),
-      color: Kolor.scaffold,
+      padding: const EdgeInsets.symmetric(
+        vertical: 20,
+        horizontal: 5,
+      ).copyWith(bottom: 10),
+      color: const Color.fromARGB(
+        255,
+        255,
+        230,
+        203,
+      ), // Light pastel orange background
       radius: 0,
       child: SafeArea(
         child: Row(
           spacing: 5,
-          children: navList
-              .map(
-                (e) => btn(
-                    iconPath: e['iconPath'],
-                    index: e['index'],
-                    label: e['label']),
-              )
-              .toList(),
+          children:
+              navList
+                  .map(
+                    (e) => btn(
+                      iconPath: e['iconPath'],
+                      index: e['index'],
+                      label: e['label'],
+                    ),
+                  )
+                  .toList(),
         ),
       ),
     );
@@ -45,6 +54,15 @@ class KNavigationBar extends StatelessWidget {
         valueListenable: activePageNotifier,
         builder: (context, activePage, _) {
           final selected = activePage == index;
+
+          final Color activeColor = Colors.white;
+          final Color inactiveColor = const Color.fromARGB(
+            255,
+            237,
+            123,
+            8,
+          ); // Dark orange
+
           return InkWell(
             onTap: () {
               activePageNotifier.value = index;
@@ -59,14 +77,14 @@ class KNavigationBar extends StatelessWidget {
                       : "$navIconPath/$iconPath.svg",
                   height: 20,
                   colorFilter: ColorFilter.mode(
-                    selected ? Kolor.primary : Kolor.fadeText,
+                    selected ? activeColor : inactiveColor,
                     BlendMode.srcIn,
                   ),
                 ),
                 Label(
                   label,
                   weight: selected ? 700 : 600,
-                  color: selected ? null : Kolor.fadeText,
+                  color: selected ? activeColor : inactiveColor,
                   fontSize: 13,
                 ).regular,
               ],

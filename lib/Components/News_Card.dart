@@ -50,14 +50,14 @@ class NewsCard extends ConsumerWidget {
               borderRadius: kRadius(10),
             ),
             clipBehavior: Clip.hardEdge,
-            constraints: BoxConstraints(maxWidth: 250),
+            constraints: const BoxConstraints(maxWidth: 250),
             child: Column(
               children: [
                 Container(
                   width: double.infinity,
-                  height: 200,
+                  height: 150,
                   decoration: BoxDecoration(
-                    borderRadius: BorderRadius.vertical(
+                    borderRadius: const BorderRadius.vertical(
                       top: Radius.circular(10),
                     ),
                     image: DecorationImage(
@@ -68,8 +68,19 @@ class NewsCard extends ConsumerWidget {
                     ),
                   ),
                 ),
-                Padding(
+                Container(
+                  width: double.infinity,
                   padding: const EdgeInsets.all(12.0),
+                  decoration: const BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        Color(0xFFFFFEFB), // Very light top
+                        Color.fromARGB(255, 246, 239, 227), // Slightly deeper bottom
+                      ],
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                    ),
+                  ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [

@@ -78,6 +78,7 @@ class _Passenger_Transportation_UIState
   double distance = 0.0;
   double distanceInMeters = 0;
   int price = 0;
+  double insurance = 10.0;
   double minimumFare = 50.0;
   double costPerKm = 10.0;
   int netPayable = 0;
@@ -85,7 +86,8 @@ class _Passenger_Transportation_UIState
   int subscriptionDiscount = 0;
   int subscriptionPercent = 0;
   int subscriptionMaxDiscount = 0;
-
+  double servicediscount = 0;
+  int serviceDiscountAmount = 0;
   final promoCode = TextEditingController();
   String discountText = "";
 
@@ -109,6 +111,12 @@ class _Passenger_Transportation_UIState
 
       costPerKm = parseToDouble(widget.serviceData["cost"]) / 100;
       minimumFare = parseToDouble(widget.serviceData["minimum_cost"]) / 100;
+      insurance =
+          parseToDouble(widget.serviceData["insurance"].toString()) / 100;
+      servicediscount = parseToDouble(
+        widget.serviceData["discount"].toString(),
+      );
+      // print("Insurance from serviceData: $insurance");
     });
   }
 
@@ -511,26 +519,23 @@ class _Passenger_Transportation_UIState
 
       final user = ref.read(userProvider);
       if (user == null) throw "User not logged in!";
+
       // Convert distance to kilometers
       double distanceInKm = distanceInMeters / 1000.0;
 
-      // Get minimum and maximum distance from service data
+      // Get max distance from DB
       double maxDistance = parseToDouble(widget.serviceData["maks_distance"]);
 
-      // Check if the distance is within the allowed range
       if (distanceInKm <= maxDistance) {
         distanceText = distanceInKm.toStringAsFixed(1);
 
-        // Calculate sub-total
-        price = kRound(costPerKm * distanceInKm);
-        if (price < minimumFare) {
-          price = kRound(minimumFare);
-        }
-        // log("Cost/Km: $costPerKm");
-        // log("Distance Km: $distanceInKm");
-        // log("Price: $price");
+        // ✅ Always apply minimum fare for first 1 km
+        double extraDistance = (distanceInKm - 1).clamp(0, double.infinity);
+        double extraCost = costPerKm * extraDistance;
 
-        // calculate subscription discount
+        price = kRound(minimumFare + extraCost);
+
+        // ✅ Subscription discount
         subscriptionDiscount = kRound(price * (subscriptionPercent / 100));
         if (subscriptionDiscount > subscriptionMaxDiscount) {
           subscriptionDiscount = subscriptionMaxDiscount;
@@ -538,33 +543,52 @@ class _Passenger_Transportation_UIState
 
         int priceAfterSubscriptionDiscount = price - subscriptionDiscount;
 
-        // calculate promo code discount safely
-        if (promoDiscount > priceAfterSubscriptionDiscount) {
-          promoDiscount = priceAfterSubscriptionDiscount;
+        // ✅ Promo discount only if promoData is set
+        if (promoData.isNotEmpty) {
+          if (promoDiscount > priceAfterSubscriptionDiscount) {
+            promoDiscount = priceAfterSubscriptionDiscount;
+          }
+        } else {
+          promoDiscount = 0; // 🛑 No promo applied, reset it
         }
 
-        // calculate net-payable
-        netPayable = price - subscriptionDiscount - promoDiscount;
+        // ✅ Calculate price after subscription and promo discounts
+        int priceAfterSubAndPromo =
+            price - subscriptionDiscount - promoDiscount;
 
-        // log("Sub-Total: $price");
-        // log("Subscription-Discount: $subscriptionDiscount");
-        // log("Promo-Discount: $promoDiscount");
-        // log("Net-Payable: $netPayable");
+        // ✅ Service discount as percentage applied here
+        serviceDiscountAmount = kRound(
+          priceAfterSubAndPromo * (servicediscount / 100),
+        );
 
-        // enforce minimum payable amount
+        // ✅ Calculate final payable with insurance
+        int ins = insurance.round();
+        netPayable =
+            price -
+            subscriptionDiscount -
+            promoDiscount -
+            serviceDiscountAmount +
+            ins;
+
+        // ✅ Minimum payable check
         if (netPayable < 1) {
-          promoDiscount -= (1 - netPayable).ceil();
-          if (promoDiscount < 0) promoDiscount = 0;
+          int diff = 1 - netPayable;
+          serviceDiscountAmount -= diff;
+          if (serviceDiscountAmount < 0) serviceDiscountAmount = 0;
           netPayable = 1;
         }
 
-        // enforce payment method
+        // ✅ Determine payment method
         paymentMethod = "Wallet";
         if (user.balance < netPayable) {
           paymentMethod = "Cash";
         }
 
-        setState(() {});
+        setState(() {
+          // Optional: If you want to show serviceDiscountAmount in UI
+          // discountText =
+          //     "₹$subscriptionDiscount (Subscription) + ₹$promoDiscount (Promo) + ₹$serviceDiscountAmount (Service)";
+        });
       } else {
         KSnackbar(
           context,
@@ -600,11 +624,11 @@ class _Passenger_Transportation_UIState
         "end_latitude": dropCoordinates!.lat,
         "end_longitude": dropCoordinates!.lng,
         "distance": distanceInMeters,
-        "price": price,
+        "price": netPayable,
         "estimasi": "$duration",
         "pickup_address": pickupAddressData!["address"],
         "destination_address": dropAddressData!["address"],
-        "promo_discount": subscriptionDiscount + promoDiscount,
+        "promo_discount": promoDiscount,
         "wallet_payment": paymentMethod == "Wallet" ? 1 : 0,
       };
 
@@ -725,11 +749,12 @@ class _Passenger_Transportation_UIState
       if (status > 1) {
         context.go(
           "/confirmation",
-          extra:
-              Map.from({
-                'subtitle': "${widget.serviceName} Booked",
-                'description': "You can track in the order details page.",
-              }).cast<String, dynamic>(),
+          extra: {
+            'subtitle': "${widget.serviceName} Booked",
+            'description': "You can track in the order details page.",
+            'transactionId': transactionId!,
+            'driverId': driverId,
+          },
         );
       } else {
         _searchCancel();
@@ -1520,9 +1545,28 @@ class _Passenger_Transportation_UIState
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
+                  Label("Base Fare").regular,
+                  Label(kCurrencyFormat(minimumFare)).regular,
+                ],
+              ),
+              height5,
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
                   Label("Promo Discount", color: StatusText.success).regular,
                   Label(
                     kCurrencyFormat((promoDiscount)),
+                    color: StatusText.success,
+                  ).regular,
+                ],
+              ),
+              height5,
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Label("Service Discount", color: StatusText.success).regular,
+                  Label(
+                    kCurrencyFormat((serviceDiscountAmount)),
                     color: StatusText.success,
                   ).regular,
                 ],
@@ -1541,6 +1585,16 @@ class _Passenger_Transportation_UIState
                   ).regular,
                 ],
               ),
+              height5,
+              // ✅ NEW: Insurance Section
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Label("Insurance").regular,
+                  Label(kCurrencyFormat(insurance)).regular,
+                ],
+              ),
+
               div,
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,

@@ -82,6 +82,39 @@ class AuthRepo {
     }
   }
 
+  static Future<Map> sendOtp(String phone) async {
+    try {
+      final res = await apiCallBack(
+        path: "/send_otp",
+        body: {"phone_number": phone},
+      );
+      return res;
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  static Future<Map> verifyOtp({
+    required String phone,
+    required String otp,
+    required String token,
+  }) async {
+    try {
+      final res = await apiCallBack(
+        path: "/verify_otp",
+        body: {
+          "phone_number": phone,
+          "otp_code": otp,
+          "token": token,
+          "checked": "false",
+        },
+      );
+      return res;
+    } catch (e) {
+      rethrow;
+    }
+  }
+
   static Future<Map> changePassword(
     String oldPassword,
     String newPassword,

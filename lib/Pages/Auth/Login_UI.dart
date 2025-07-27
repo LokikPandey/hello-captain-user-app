@@ -34,21 +34,22 @@ class _Login_UIState extends ConsumerState<Login_UI> {
     try {
       FocusScope.of(context).unfocus();
       isLoading.value = true;
+
       final res = await AuthRepo.login(
         selectedCountry + phone.text,
         password.text,
       );
 
       if (res["code"] != "200") throw res["message"];
+
       await HiveConfig.setData("userData", {
         "phone": selectedCountry + phone.text,
         "password": password.text,
       });
 
       ref.read(userProvider.notifier).state = UserModel.fromMap(res["data"][0]);
-      ref.read(appSettingsProvider.notifier).state = AppSettingsModel.fromMap(
-        res as Map<String, dynamic>,
-      );
+      ref.read(appSettingsProvider.notifier).state =
+          AppSettingsModel.fromMap(res as Map<String, dynamic>);
 
       context.go("/");
     } catch (e) {
@@ -79,6 +80,8 @@ class _Login_UIState extends ConsumerState<Login_UI> {
               Label("Welcome Back to", fontSize: 17).regular,
               Label("Hello Captain", weight: 700, fontSize: 25).title,
               kHeight(30),
+
+              /// Phone Field
               KField(
                 controller: phone,
                 showRequired: false,
@@ -90,20 +93,16 @@ class _Login_UIState extends ConsumerState<Login_UI> {
                       builder: (context) => CountryDialog(),
                     );
 
-                    selectedCountry = res["code"];
-                    setState(() {});
+                    if (res != null && res["code"] != null) {
+                      selectedCountry = res["code"];
+                      setState(() {});
+                    }
                   },
                   icon: Row(
-                    spacing: 5,
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Label(selectedCountry, fontSize: 18, height: 1.5).regular,
-                      Flexible(
-                        child: Icon(
-                          Icons.keyboard_arrow_down_rounded,
-                          size: 15,
-                        ),
-                      ),
+                      Icon(Icons.keyboard_arrow_down_rounded, size: 15),
                     ],
                   ),
                   visualDensity: VisualDensity.compact,
@@ -115,6 +114,8 @@ class _Login_UIState extends ConsumerState<Login_UI> {
                 validator: (val) => KValidation.phone(val),
               ),
               height15,
+
+              /// Password Field
               KField(
                 controller: password,
                 label: "Enter Password",
@@ -137,23 +138,37 @@ class _Login_UIState extends ConsumerState<Login_UI> {
                 validator: (val) => KValidation.required(val),
               ),
               height10,
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  TextButton(
-                    onPressed: () => context.push("/forgot-password"),
-                    child: Label("Forgot Password?", weight: 900).regular,
-                  ),
-                  TextButton(
-                    onPressed: () => context.push("/register"),
-                    child: Label("Create Account", weight: 900).regular,
-                  ),
-                ],
-              ),
+
+              /// Action Links
+              Column(
+  crossAxisAlignment: CrossAxisAlignment.center,
+  children: [
+    Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        TextButton(
+          onPressed: () => context.push("/forgot-password"),
+          child: Label("Forgot Password?", weight: 900).regular,
+        ),
+        SizedBox(width: 10), // Spacing between the buttons
+        TextButton(
+          onPressed: () => context.push("/login-otp"),
+          child: Label("Login with OTP", weight: 900).regular,
+        ),
+      ],
+    ),
+    TextButton(
+      onPressed: () => context.push("/register"),
+      child: Label("Create Account", weight: 900).regular,
+    ),
+  ],
+),
             ],
           ),
         ),
       ),
+
+      /// Bottom Login Button
       bottomNavigationBar: SafeArea(
         child: Padding(
           padding: EdgeInsets.all(kPadding),

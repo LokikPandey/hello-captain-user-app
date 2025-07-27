@@ -341,35 +341,35 @@ class _Home_UIState extends ConsumerState<Home_UI> {
                                       ),
                                     ),
                                   ),
-                                  Positioned(
-                                    right: 8,
-                                    top: 0,
-                                    bottom: 40,
-                                    child: IgnorePointer(
-                                      child: Container(
-                                        width: 30,
-                                        alignment: Alignment.center,
-                                        child: Container(
-                                          decoration: const BoxDecoration(
-                                            color: Color.fromARGB(
-                                              213,
-                                              255,
-                                              140,
-                                              0,
-                                            ),
-                                            shape: BoxShape.circle,
-                                          ),
-                                          padding: EdgeInsets.all(6),
-                                          child: Icon(
-                                            Icons.arrow_forward_ios_rounded,
-                                            size: 16,
-                                            color: Colors.white,
-                                            weight: 900,
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                  ),
+                                  // Positioned(
+                                  //   right: 8,
+                                  //   top: 0,
+                                  //   bottom: 40,
+                                  //   child: IgnorePointer(
+                                  //     child: Container(
+                                  //       width: 30,
+                                  //       alignment: Alignment.center,
+                                  //       child: Container(
+                                  //         decoration: const BoxDecoration(
+                                  //           color: Color.fromARGB(
+                                  //             213,
+                                  //             255,
+                                  //             140,
+                                  //             0,
+                                  //           ),
+                                  //           shape: BoxShape.circle,
+                                  //         ),
+                                  //         padding: EdgeInsets.all(6),
+                                  //         child: Icon(
+                                  //           Icons.arrow_forward_ios_rounded,
+                                  //           size: 16,
+                                  //           color: Colors.white,
+                                  //           weight: 900,
+                                  //         ),
+                                  //       ),
+                                  //     ),
+                                  //   ),
+                                  // ),
                                 ],
                               ),
                             ),

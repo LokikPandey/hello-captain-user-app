@@ -36,6 +36,7 @@ import 'package:hello_captain_user/Pages/Service/Shipment/Shipment_UI.dart';
 import 'package:hello_captain_user/Pages/Splash_UI.dart';
 import 'package:hello_captain_user/Pages/Welcome_UI.dart';
 import 'package:hello_captain_user/Repository/auth_repo.dart';
+import 'package:hello_captain_user/Pages/Auth/LoginOtp_UI.dart';
 import 'package:permission_handler/permission_handler.dart';
 import '../Pages/Auth/Register_UI.dart';
 import '../Pages/Error/Server_Error_UI.dart';
@@ -98,8 +99,9 @@ final routeProvider = Provider<GoRouter>((ref) {
             '/forgot-password',
             '/welcome',
             '/splash',
+            '/login-otp',
           ].contains(state.fullPath)) {
-        return '/login';
+        return '/login-otp';
       }
       if (user != null && state.fullPath == '/login') {
         return '/';
@@ -130,6 +132,8 @@ final routeProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(path: "/", builder: (context, state) => Root_UI()),
       GoRoute(path: "/login", builder: (context, state) => Login_UI()),
+      GoRoute(path: "/login-otp", builder: (context, state) => LoginOtp_UI()),
+
       GoRoute(path: "/register", builder: (context, state) => Register_UI()),
       GoRoute(
         path: "/forgot-password",
@@ -273,15 +277,18 @@ final routeProvider = Provider<GoRouter>((ref) {
       ),
 
       GoRoute(
-        path: "/confirmation",
-        builder: (context, state) {
-          final extra = state.extra as Map<String, dynamic>;
-          return Confirmation_UI(
-            subtitle: extra['subtitle'],
-            description: extra['description'],
-          );
-        },
-      ),
+  path: "/confirmation",
+  builder: (context, state) {
+    final extra = state.extra as Map<String, dynamic>;
+    return Confirmation_UI(
+      subtitle: extra['subtitle'],
+      description: extra['description'],
+      transactionId: extra['transactionId'],
+      driverId: extra['driverId'],
+    );
+  },
+),
+
 
       GoRoute(
         path: "/order-detail/:transactionId/:driverId",
@@ -291,11 +298,7 @@ final routeProvider = Provider<GoRouter>((ref) {
               transactionId: state.pathParameters['transactionId']!,
             ),
       ),
-      GoRoute(
-          path: "/orders",
-          builder: (context, state) => const Orders_UI(),
-        ),
-
+      GoRoute(path: "/orders", builder: (context, state) => const Orders_UI()),
 
       GoRoute(
         path: "/locate-driver/:driverId",

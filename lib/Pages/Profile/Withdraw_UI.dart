@@ -39,7 +39,7 @@ class _Withdraw_UIState extends ConsumerState<Withdraw_UI> {
         "id": user.id,
         "bank": bankName.text,
         "nama": holderName.text,
-        "amount": parseToDouble(amount.text) * 100,
+        "amount": parseToDouble(amount.text),
         "card": accountNumber.text,
         "email": user.email,
         "phone_number": user.phone_number,

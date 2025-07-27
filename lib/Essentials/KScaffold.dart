@@ -128,12 +128,16 @@ AppBar KAppBar(
   bool showBack = true,
   List<Widget>? actions,
 }) {
+  final currentPath = GoRouterState.of(context).uri.toString();
+
+  final bool isOrderDetailPage = currentPath.startsWith("/order-detail/");
+
   return AppBar(
-    backgroundColor: const Color(0xFFFFF2DC), // pastel orange
+    backgroundColor: const Color(0xFFFFF2DC),
     automaticallyImplyLeading: false,
     titleSpacing: showBack ? 0 : kPadding,
     leadingWidth: 50,
-    surfaceTintColor: Colors.transparent, // prevent overlay tints
+    surfaceTintColor: Colors.transparent,
     leading:
         showBack
             ? Align(
@@ -143,19 +147,21 @@ AppBar KAppBar(
                 icon: const Icon(
                   Icons.arrow_back_ios_new,
                   size: 20,
-                  color: Colors.deepOrange, // optional: match theme
+                  color: Colors.deepOrange,
                 ),
               ),
             )
             : null,
     title:
         child ??
-        Label(
-          title,
-          fontSize: 20,
-          weight: 800, // bolder text
-          color: Colors.deepOrange, // orange title
-        ).title,
-    actions: actions,
+        Label(title, fontSize: 20, weight: 800, color: Colors.deepOrange).title,
+    actions: [
+      ...(actions ?? []),
+      if (isOrderDetailPage)
+        IconButton(
+          onPressed: () => context.go('/'),
+          icon: const Icon(Icons.home, color: Colors.deepOrange),
+        ),
+    ],
   );
 }

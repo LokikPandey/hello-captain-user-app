@@ -43,7 +43,7 @@ class _Order_Detail_Map_WidgetState
   @override
   void initState() {
     super.initState();
-    _refreshTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+    _refreshTimer = Timer.periodic(const Duration(seconds: 15), (timer) {
       fetchAndUpdateDriverLocation();
       // print("✅ Driver location refreshed at ${DateTime.now()}");
     });

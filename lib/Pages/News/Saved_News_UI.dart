@@ -41,7 +41,7 @@ class _Saved_UIState extends ConsumerState<Saved_UI> {
   Widget build(BuildContext context) {
     final savedNewsData = ref.watch(savedNewsFuture);
     return KScaffold(
-      appBar: KAppBar(context, title: "Saved", showBack: false),
+      appBar: KAppBar(context, title: "Saved", showBack: true),
       body: SafeArea(
         child: Container(
           decoration: const BoxDecoration(

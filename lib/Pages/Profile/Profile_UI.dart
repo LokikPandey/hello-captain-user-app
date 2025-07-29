@@ -194,6 +194,19 @@ class _Profile_UIState extends ConsumerState<Profile_UI> {
                 ),
                 div,
                 _tile(
+                  onTap: () => context.push("/saved"),
+                  icon: Icons.favorite_border,
+                  label: "Saved News",
+                ),
+                div,
+                _tile(
+                  onTap: () => context.push("/chat"),
+                  icon: Icons.chat_bubble_outline,
+                  label: "Chat",
+                ),
+
+                div,
+                _tile(
                   onTap: () => context.push("/profile/edit"),
                   icon: Icons.edit_note,
                   label: "Edit Profile",

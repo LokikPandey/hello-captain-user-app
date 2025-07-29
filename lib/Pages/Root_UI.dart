@@ -34,10 +34,9 @@ class _Root_UIState extends ConsumerState<Root_UI> {
 
     {"label": "Rides", "iconPath": "orders", "index": 1},
 
-    {"label": "Saved", "iconPath": "heart", "index": 2},
+    // {"label": "Saved", "iconPath": "heart", "index": 2},
 
-    {"label": "Chat", "iconPath": "chat", "index": 3},
-
+    // {"label": "Chat", "iconPath": "chat", "index": 3},
     {"label": "Profile", "iconPath": "profile", "index": 4},
   ];
 

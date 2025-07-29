@@ -120,36 +120,15 @@ class _Order_Detail_UIState extends ConsumerState<Order_Detail_UI> {
     );
   }
 
-  void sendSos() async {
-    try {
-      isLoading.value = true;
-      final user = ref.read(userProvider);
-      if (user == null) throw "User not logged in!";
-
-      final serviceEnabled = await Location.instance.requestService();
-
-      if (!serviceEnabled) throw "Need Location Services to send SOS!";
-
-      final myPos = await LocationService.getCurrentLocation();
-      if (myPos == null) throw "Location unresolved!";
-
-      final res = await ContactRepo.sos(
-        userId: user.id,
-        lat: "${myPos.latitude}",
-        lng: "${myPos.longitude}",
-      );
-
-      if (res['error'] != null) {
-        KSnackbar(context, message: res['error'], error: true);
-      } else {
-        KSnackbar(context, message: "SOS Sent!");
-      }
-    } catch (e) {
-      KSnackbar(context, message: e, error: true);
-    } finally {
-      isLoading.value = false;
-    }
+void sendSos() async {
+  try {
+    const emergencyNumber = '100'; // Nepal Police emergency number
+    await launchUrlString('tel:$emergencyNumber');
+  } catch (e) {
+    KSnackbar(context, message: "Unable to make SOS call: $e", error: true);
   }
+}
+
 
   @override
   Widget build(BuildContext context) {
@@ -215,22 +194,22 @@ class _Order_Detail_UIState extends ConsumerState<Order_Detail_UI> {
                       ],
                     ),
                     height20,
-                    if (order['status'] != "4")
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 20.0),
-                        child: Order_Detail_Map_Widget(
-                          startPosition: Position(
-                            parseToDouble(order['start_longitude']),
-                            parseToDouble(order['start_latitude']),
-                          ),
-                          endPosition: Position(
-                            parseToDouble(order['end_longitude']),
-                            parseToDouble(order['end_latitude']),
-                          ),
-                          serviceId: order["service_order"],
-                          driverId: order["driver_id"],
+
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 20.0),
+                      child: Order_Detail_Map_Widget(
+                        startPosition: Position(
+                          parseToDouble(order['start_longitude']),
+                          parseToDouble(order['start_latitude']),
                         ),
+                        endPosition: Position(
+                          parseToDouble(order['end_longitude']),
+                          parseToDouble(order['end_latitude']),
+                        ),
+                        serviceId: order["service_order"],
+                        driverId: order["driver_id"],
                       ),
+                    ),
 
                     if (driver["id"] != null)
                       KCard(
@@ -443,23 +422,23 @@ class _Order_Detail_UIState extends ConsumerState<Order_Detail_UI> {
                       ratingsAndReview(order),
 
                     if (kStatus[order['status']] == "Pending" ||
-    kStatus[order['status']] == "Driver Found" ||
-    kStatus[order['status']] == "Accepted" ||
-    kStatus[order['status']] == "Process")
-  Padding(
-    padding: const EdgeInsets.only(top: 10.0),
-    child: SizedBox(
-      width: double.infinity, // 👈 makes it full width
-      child: KButton(
-        onPressed: confirmCancelRide,
-        label: "Cancel Ride",
-        backgroundColor: Colors.red,
-        style: KButtonStyle.regular,
-        radius: 8,
-        padding: EdgeInsets.symmetric(vertical: 12),
-      ),
-    ),
-  ),
+                        kStatus[order['status']] == "Driver Found" ||
+                        kStatus[order['status']] == "Accepted" ||
+                        kStatus[order['status']] == "Process")
+                      Padding(
+                        padding: const EdgeInsets.only(top: 10.0),
+                        child: SizedBox(
+                          width: double.infinity, // 👈 makes it full width
+                          child: KButton(
+                            onPressed: confirmCancelRide,
+                            label: "Cancel Ride",
+                            backgroundColor: Colors.red,
+                            style: KButtonStyle.regular,
+                            radius: 8,
+                            padding: EdgeInsets.symmetric(vertical: 12),
+                          ),
+                        ),
+                      ),
 
                     kHeight(100),
                   ],

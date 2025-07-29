@@ -38,6 +38,7 @@ import 'package:hello_captain_user/Pages/Welcome_UI.dart';
 import 'package:hello_captain_user/Repository/auth_repo.dart';
 import 'package:hello_captain_user/Pages/Auth/LoginOtp_UI.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:hello_captain_user/Pages/News/Saved_News_UI.dart';
 import '../Pages/Auth/Register_UI.dart';
 import '../Pages/Error/Server_Error_UI.dart';
 import '../Pages/Root_UI.dart';
@@ -126,6 +127,7 @@ final routeProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(path: "/splash", builder: (context, state) => Splash_UI()),
       GoRoute(path: "/welcome", builder: (context, state) => Welcome_UI()),
+      GoRoute(path: '/saved', builder: (context, state) => const Saved_UI()),
       GoRoute(
         path: "/request-location",
         builder: (context, state) => Request_Location_UI(),
@@ -277,18 +279,17 @@ final routeProvider = Provider<GoRouter>((ref) {
       ),
 
       GoRoute(
-  path: "/confirmation",
-  builder: (context, state) {
-    final extra = state.extra as Map<String, dynamic>;
-    return Confirmation_UI(
-      subtitle: extra['subtitle'],
-      description: extra['description'],
-      transactionId: extra['transactionId'],
-      driverId: extra['driverId'],
-    );
-  },
-),
-
+        path: "/confirmation",
+        builder: (context, state) {
+          final extra = state.extra as Map<String, dynamic>;
+          return Confirmation_UI(
+            subtitle: extra['subtitle'],
+            description: extra['description'],
+            transactionId: extra['transactionId'],
+            driverId: extra['driverId'],
+          );
+        },
+      ),
 
       GoRoute(
         path: "/order-detail/:transactionId/:driverId",

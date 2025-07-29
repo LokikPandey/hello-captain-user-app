@@ -21,7 +21,7 @@ class _Chat_UIState extends ConsumerState<Chat_UI> {
   Widget build(BuildContext context) {
     final user = ref.watch(userProvider);
     return KScaffold(
-      appBar: KAppBar(context, title: "Chats", showBack: false),
+      appBar: KAppBar(context, title: "Chats", showBack: true),
       body: SafeArea(
         child: Container(
           decoration: const BoxDecoration(

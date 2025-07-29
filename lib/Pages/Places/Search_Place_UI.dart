@@ -212,23 +212,24 @@ class _Search_Place_UIState extends ConsumerState<Search_Place_UI> {
                   final desc = address['description'] ?? 'Unknown';
                   final placeId =
                       address['place_id'] ?? desc.hashCode.toString();
+                  final isRecent = address['isRecent'] == true;
 
                   return KCard(
                     onTap:
-                        () => getPlaceDetails(
-                          placeId,
-                          desc,
-                          isRecent: address['isRecent'] == true,
-                        ),
+                        () =>
+                            getPlaceDetails(placeId, desc, isRecent: isRecent),
                     color: Colors.white,
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
-                        const Padding(
-                          padding: EdgeInsets.only(right: 10),
+                        Padding(
+                          padding: const EdgeInsets.only(right: 10),
                           child: CircleAvatar(
                             backgroundColor: Colors.orange,
-                            child: Icon(Icons.history, color: Colors.white),
+                            child: Icon(
+                              isRecent ? Icons.history : Icons.location_on,
+                              color: Colors.white,
+                            ),
                           ),
                         ),
                         Expanded(

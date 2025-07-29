@@ -6,7 +6,7 @@ import 'package:hello_captain_user/Resources/commons.dart';
 import 'package:hello_captain_user/Resources/constants.dart';
 import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart';
 import 'package:flutter/services.dart';
-import 'package:hello_captain_user/Repository/mapBox_repo.dart';                                    
+import 'package:hello_captain_user/Repository/mapBox_repo.dart';
 import 'dart:async';
 
 Timer? _refreshTimer;
@@ -43,7 +43,7 @@ class _Order_Detail_Map_WidgetState
   @override
   void initState() {
     super.initState();
-    _refreshTimer = Timer.periodic(const Duration(seconds: 15), (timer) {
+    _refreshTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
       fetchAndUpdateDriverLocation();
       // print("✅ Driver location refreshed at ${DateTime.now()}");
     });
@@ -57,7 +57,6 @@ class _Order_Detail_Map_WidgetState
     super.dispose();
   }
 
-  
   Future<void> setMarkerPoint(String type, Position pos) async {
     try {
       isLoading.value = true;
@@ -175,7 +174,7 @@ class _Order_Detail_Map_WidgetState
         );
         await setMarkerPoint("Driver", newDriverPos);
 
-        KSnackbar(context, message: "Captain Location Updated");
+        // KSnackbar(context, message: "Captain Location Updated");
       }
     } catch (e) {
       KSnackbar(
@@ -186,22 +185,22 @@ class _Order_Detail_Map_WidgetState
     }
   }
 
-Future<void> _moveMapBy({required double dx, required double dy}) async {
-  final cameraState = await mapController?.getCameraState();
-  if (cameraState != null) {
-    final currentCenter = cameraState.center;
-    final newCenter = Point(
-      coordinates: Position(
-        currentCenter.coordinates.lng + dx,
-        currentCenter.coordinates.lat + dy,
-      ),
-    );
-    mapController?.flyTo(
-      CameraOptions(center: newCenter),
-      MapAnimationOptions(duration: 500),
-    );
+  Future<void> _moveMapBy({required double dx, required double dy}) async {
+    final cameraState = await mapController?.getCameraState();
+    if (cameraState != null) {
+      final currentCenter = cameraState.center;
+      final newCenter = Point(
+        coordinates: Position(
+          currentCenter.coordinates.lng + dx,
+          currentCenter.coordinates.lat + dy,
+        ),
+      );
+      mapController?.flyTo(
+        CameraOptions(center: newCenter),
+        MapAnimationOptions(duration: 500),
+      );
+    }
   }
-}
 
   @override
   Widget build(BuildContext context) {
@@ -263,81 +262,81 @@ Future<void> _moveMapBy({required double dx, required double dy}) async {
             ),
           ),
           Positioned(
-  top: 10,
-  right: 10,
-  child: Column(
-    children: [
-      FloatingActionButton(
-        mini: true,
-        heroTag: 'refresh',
-        onPressed: fetchAndUpdateDriverLocation,
-        child: Icon(Icons.refresh),
-      ),
-      SizedBox(height: 8),
-    FloatingActionButton(
-      mini: true,
-      heroTag: 'zoomIn',
-      onPressed: () async {
-        final state = await mapController?.getCameraState();
-        final currentZoom = state?.zoom ?? 10;
-        mapController?.flyTo(
-          CameraOptions(zoom: currentZoom + 1),
-          MapAnimationOptions(duration: 500),
-        );
-      },
-  child: Icon(Icons.zoom_in),
-),
-      SizedBox(height: 8),
-FloatingActionButton(
-  mini: true,
-  heroTag: 'zoomOut',
-  onPressed: () async {
-    final state = await mapController?.getCameraState();
-    final currentZoom = state?.zoom ?? 10;
-    mapController?.flyTo(
-      CameraOptions(zoom: currentZoom - 1),
-      MapAnimationOptions(duration: 500),
-    );
-  },
-  child: Icon(Icons.zoom_out),
-),
+            top: 10,
+            right: 10,
+            child: Column(
+              children: [
+                FloatingActionButton(
+                  mini: true,
+                  heroTag: 'refresh',
+                  onPressed: fetchAndUpdateDriverLocation,
+                  child: Icon(Icons.refresh),
+                ),
+                SizedBox(height: 8),
+                FloatingActionButton(
+                  mini: true,
+                  heroTag: 'zoomIn',
+                  onPressed: () async {
+                    final state = await mapController?.getCameraState();
+                    final currentZoom = state?.zoom ?? 10;
+                    mapController?.flyTo(
+                      CameraOptions(zoom: currentZoom + 1),
+                      MapAnimationOptions(duration: 500),
+                    );
+                  },
+                  child: Icon(Icons.zoom_in),
+                ),
+                SizedBox(height: 8),
+                FloatingActionButton(
+                  mini: true,
+                  heroTag: 'zoomOut',
+                  onPressed: () async {
+                    final state = await mapController?.getCameraState();
+                    final currentZoom = state?.zoom ?? 10;
+                    mapController?.flyTo(
+                      CameraOptions(zoom: currentZoom - 1),
+                      MapAnimationOptions(duration: 500),
+                    );
+                  },
+                  child: Icon(Icons.zoom_out),
+                ),
 
-      SizedBox(height: 8),
-      FloatingActionButton(
-        mini: true,
-        heroTag: 'moveNorth',
-        onPressed: () {
-          _moveMapBy(dx: 0, dy: 0.005);
-        },
-        child: Icon(Icons.arrow_upward),
-      ),
-      FloatingActionButton(
-        mini: true,
-        heroTag: 'moveSouth',
-        onPressed: () {
-          _moveMapBy(dx: 0, dy: -0.005);
-        },
-        child: Icon(Icons.arrow_downward),
-      ),
-      FloatingActionButton(
-        mini: true,
-        heroTag: 'moveEast',
-        onPressed: () {
-          _moveMapBy(dx: 0.005, dy: 0);
-        },
-        child: Icon(Icons.arrow_forward),
-      ),
-      FloatingActionButton(
-        mini: true,
-        heroTag: 'moveWest',
-        onPressed: () {
-          _moveMapBy(dx: -0.005, dy: 0);
-        },
-        child: Icon(Icons.arrow_back),
-      ),
-    ],
-  ),
-),
+                SizedBox(height: 8),
+                FloatingActionButton(
+                  mini: true,
+                  heroTag: 'moveNorth',
+                  onPressed: () {
+                    _moveMapBy(dx: 0, dy: 0.005);
+                  },
+                  child: Icon(Icons.arrow_upward),
+                ),
+                FloatingActionButton(
+                  mini: true,
+                  heroTag: 'moveSouth',
+                  onPressed: () {
+                    _moveMapBy(dx: 0, dy: -0.005);
+                  },
+                  child: Icon(Icons.arrow_downward),
+                ),
+                FloatingActionButton(
+                  mini: true,
+                  heroTag: 'moveEast',
+                  onPressed: () {
+                    _moveMapBy(dx: 0.005, dy: 0);
+                  },
+                  child: Icon(Icons.arrow_forward),
+                ),
+                FloatingActionButton(
+                  mini: true,
+                  heroTag: 'moveWest',
+                  onPressed: () {
+                    _moveMapBy(dx: -0.005, dy: 0);
+                  },
+                  child: Icon(Icons.arrow_back),
+                ),
+              ],
+            ),
+          ),
         ],
       ),
     );

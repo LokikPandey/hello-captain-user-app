@@ -97,7 +97,7 @@ class AuthRepo {
   static Future<Map> verifyOtp({
     required String phone,
     required String otp,
-    required String token,
+    // required String token,
   }) async {
     try {
       final res = await apiCallBack(
@@ -105,7 +105,6 @@ class AuthRepo {
         body: {
           "phone_number": phone,
           "otp_code": otp,
-          "token": token,
           "checked": "false",
         },
       );

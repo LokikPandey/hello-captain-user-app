@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:firebase_messaging/firebase_messaging.dart';
 
 import 'package:hello_captain_user/Essentials/KScaffold.dart';
 import 'package:hello_captain_user/Essentials/Label.dart';
@@ -55,13 +54,8 @@ class _LoginOtp_UIState extends ConsumerState<LoginOtp_UI> {
       isLoading.value = true;
 
       final number = phone.text.trim();
-      final fcm = await FirebaseMessaging.instance.getToken();
 
-      final res = await AuthRepo.verifyOtp(
-        phone: number,
-        otp: otp.text.trim(),
-        token: fcm ?? "",
-      );
+      final res = await AuthRepo.verifyOtp(phone: number, otp: otp.text.trim());
 
       if (res["code"] != "200") throw res["message"];
 
@@ -103,7 +97,6 @@ class _LoginOtp_UIState extends ConsumerState<LoginOtp_UI> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              // Top Centered Titles
               Center(child: Label("Login").title),
               height20,
               Center(child: Label("Welcome Back to", fontSize: 17).regular),
@@ -172,7 +165,6 @@ class _LoginOtp_UIState extends ConsumerState<LoginOtp_UI> {
                 keyboardType: TextInputType.number,
               ),
 
-              /// Login with Password / Create Account below OTP field
               height10,
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,

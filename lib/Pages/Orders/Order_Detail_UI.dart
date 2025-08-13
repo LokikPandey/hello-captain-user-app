@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -37,6 +38,45 @@ class Order_Detail_UI extends ConsumerStatefulWidget {
 class _Order_Detail_UIState extends ConsumerState<Order_Detail_UI> {
   final isLoading = ValueNotifier(false);
   int selectedRating = 0;
+  Timer? _pollingTimer;
+  @override
+  void initState() {
+    super.initState();
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      startPollingOrderDetails();
+    });
+  }
+
+  void startPollingOrderDetails() {
+    // Call immediately once after the first frame
+    ref.invalidate(
+      orderDetailFuture(
+        jsonEncode({
+          "driverId": widget.driverId,
+          "transactionId": widget.transactionId,
+        }),
+      ),
+    );
+
+    // Then call every 10 seconds
+    _pollingTimer = Timer.periodic(Duration(seconds: 10), (_) {
+      ref.invalidate(
+        orderDetailFuture(
+          jsonEncode({
+            "driverId": widget.driverId,
+            "transactionId": widget.transactionId,
+          }),
+        ),
+      );
+    });
+  }
+
+  @override
+  void dispose() {
+    _pollingTimer?.cancel();
+    super.dispose();
+  }
 
   void shareRatings() async {
     try {
@@ -58,7 +98,7 @@ class _Order_Detail_UIState extends ConsumerState<Order_Detail_UI> {
         error: res["message"] != 'success',
       );
     } catch (e) {
-      KSnackbar(context, message: e, error: true);
+      KSnackbar(context, message: e.toString(), error: true);
     } finally {
       isLoading.value = false;
     }
@@ -120,15 +160,16 @@ class _Order_Detail_UIState extends ConsumerState<Order_Detail_UI> {
     );
   }
 
-void sendSos() async {
-  try {
-    const emergencyNumber = '100'; // Nepal Police emergency number
-    await launchUrlString('tel:$emergencyNumber');
-  } catch (e) {
-    KSnackbar(context, message: "Unable to make SOS call: $e", error: true);
+  void sendSos() async {
+    try {
+      const emergencyNumber = '100'; // Nepal Police emergency number
+      await launchUrlString('tel:$emergencyNumber');
+    } catch (e) {
+      KSnackbar(context, message: "Unable to make SOS call: $e", error: true);
+    }
   }
-}
 
+  bool intialcheck = false;
 
   @override
   Widget build(BuildContext context) {
@@ -163,6 +204,21 @@ void sendSos() async {
                 final order = data['data'][0];
                 final driver = data['driver'][0];
                 final items = data['item'];
+
+                if (kStatus[order['status']] == "Complete") {
+                  if (intialcheck) {
+                    _pollingTimer?.cancel();
+                    Future.delayed(const Duration(seconds: 1), () {
+                      if (mounted) {
+                        context.go(
+                          '/ride-complete/${order['id']}/${order['driver_id']}',
+                        );
+                      }
+                    });
+                  }
+                } else {
+                  intialcheck = true;
+                }
                 // log("$data");
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -195,21 +251,24 @@ void sendSos() async {
                     ),
                     height20,
 
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 20.0),
-                      child: Order_Detail_Map_Widget(
-                        startPosition: Position(
-                          parseToDouble(order['start_longitude']),
-                          parseToDouble(order['start_latitude']),
+                    // Conditionally display the map widget.
+                    // Only show the map if the order status is NOT 'Complete'.
+                    if (kStatus[order['status']] != "Complete")
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 20.0),
+                        child: Order_Detail_Map_Widget(
+                          startPosition: Position(
+                            parseToDouble(order['start_longitude']),
+                            parseToDouble(order['start_latitude']),
+                          ),
+                          endPosition: Position(
+                            parseToDouble(order['end_longitude']),
+                            parseToDouble(order['end_latitude']),
+                          ),
+                          serviceId: order["service_order"],
+                          driverId: order["driver_id"],
                         ),
-                        endPosition: Position(
-                          parseToDouble(order['end_longitude']),
-                          parseToDouble(order['end_latitude']),
-                        ),
-                        serviceId: order["service_order"],
-                        driverId: order["driver_id"],
                       ),
-                    ),
 
                     if (driver["id"] != null)
                       KCard(
@@ -253,7 +312,6 @@ void sendSos() async {
                                   ),
                                 ),
                                 width10,
-
                                 IconButton(
                                   onPressed: () async {
                                     try {
@@ -449,7 +507,6 @@ void sendSos() async {
             ),
           ),
         ),
-
         floatingActionButton: FloatingActionButton(
           onPressed: sendSos,
           elevation: 0,
@@ -467,7 +524,6 @@ void sendSos() async {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Label("Share Ratings", color: Kolor.primary).regular,
-
           Row(
             children: [
               Flexible(

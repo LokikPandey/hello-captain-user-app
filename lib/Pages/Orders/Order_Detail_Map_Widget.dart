@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hello_captain_user/Repository/home_repo.dart';
@@ -7,9 +8,6 @@ import 'package:hello_captain_user/Resources/constants.dart';
 import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart';
 import 'package:flutter/services.dart';
 import 'package:hello_captain_user/Repository/mapBox_repo.dart';
-import 'dart:async';
-
-Timer? _refreshTimer;
 
 class Order_Detail_Map_Widget extends ConsumerStatefulWidget {
   final Position startPosition;
@@ -39,18 +37,21 @@ class _Order_Detail_Map_WidgetState
   PointAnnotation? pickupPoint;
   PointAnnotation? dropPoint;
   PointAnnotation? driverMarker;
+  Timer? _refreshTimer;
 
   @override
   void initState() {
     super.initState();
-    _refreshTimer = Timer.periodic(const Duration(seconds: 15), (timer) {
+    // Start the periodic timer to refresh the driver's location every 15 seconds
+    _refreshTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
       fetchAndUpdateDriverLocation();
-      // print("✅ Driver location refreshed at ${DateTime.now()}");
+      print("✅ Driver location refreshed by Timer at ${DateTime.now()}");
     });
   }
 
   @override
   void dispose() {
+    // Cancel the timer when the widget is disposed to prevent memory leaks
     _refreshTimer?.cancel();
     pointManager?.deleteAll();
     polylineManager?.deleteAll();
@@ -60,65 +61,70 @@ class _Order_Detail_Map_WidgetState
   Future<void> setMarkerPoint(String type, Position pos) async {
     try {
       isLoading.value = true;
+      Uint8List imageData;
+      PointAnnotationOptions point;
+
+      if (pointManager == null) {
+        throw Exception("PointAnnotationManager is not initialized.");
+      }
 
       switch (type) {
         case "Pickup":
           final ByteData bytes = await rootBundle.load('$kImagePath/pin.png');
-          final Uint8List imageData = bytes.buffer.asUint8List();
+          imageData = bytes.buffer.asUint8List();
 
           if (pickupPoint != null) {
-            pointManager?.delete(pickupPoint!);
+            await pointManager!.delete(pickupPoint!);
           }
-          final point = PointAnnotationOptions(
+          point = PointAnnotationOptions(
             geometry: Point(coordinates: pos),
             image: imageData,
             iconSize: .2,
           );
-          pickupPoint = await pointManager?.create(point);
+          pickupPoint = await pointManager!.create(point);
           break;
 
         case "Drop":
           final ByteData bytes = await rootBundle.load(
             '$kImagePath/drop-pin.png',
           );
-          final Uint8List imageData = bytes.buffer.asUint8List();
+          imageData = bytes.buffer.asUint8List();
           if (dropPoint != null) {
-            pointManager?.delete(dropPoint!);
+            await pointManager!.delete(dropPoint!);
           }
-          final point = PointAnnotationOptions(
+          point = PointAnnotationOptions(
             geometry: Point(coordinates: pos),
             image: imageData,
             iconSize: .2,
           );
-          dropPoint = await pointManager?.create(point);
+          dropPoint = await pointManager!.create(point);
           break;
 
         case "Driver":
           final serviceDetailsList = ref.read(serviceDetailsProvider);
-
-          // Now we will find that element from list where widget.serviceData["service_id"] = serviceDetailsList[i]["service_id"]
           final Map<dynamic, dynamic>? serviceDetails = serviceDetailsList
               .firstWhere(
                 (element) => element["service_id"] == widget.serviceId,
                 orElse: () => null,
               );
-
           final mapsIconsId = serviceDetails?["icon_driver"] ?? "0";
-
           final ByteData bytes = await rootBundle.load(
             '${mapsIcons[mapsIconsId]}',
           );
-          final Uint8List imageData = bytes.buffer.asUint8List();
+          imageData = bytes.buffer.asUint8List();
 
-          final point = PointAnnotationOptions(
+          if (driverMarker != null) {
+            await pointManager!.delete(driverMarker!);
+          }
+          point = PointAnnotationOptions(
             geometry: Point(coordinates: pos),
             image: imageData,
             iconSize: .7,
           );
-          final driver = await pointManager?.create(point);
-          driverMarker = driver;
+          driverMarker = await pointManager!.create(point);
           break;
         default:
+          return;
       }
     } catch (e) {
       KSnackbar(context, message: "Marker Error: $e", error: true);
@@ -143,7 +149,10 @@ class _Order_Detail_Map_WidgetState
           geometry: LineString(coordinates: coordinatesList),
           lineWidth: 3,
         );
-        await polylineManager!.create(polylines);
+        if (polylineManager != null) {
+          await polylineManager!.deleteAll();
+          await polylineManager!.create(polylines);
+        }
       }
     } catch (e) {
       KSnackbar(context, message: "Polyline Error: $e", error: true);
@@ -163,18 +172,52 @@ class _Order_Detail_Map_WidgetState
     );
   }
 
+  Position? _currentDriverPos; // store last known position
+
+  Future<void> _animateDriverMovement(Position from, Position to) async {
+    const int steps = 20; // higher = smoother
+    const Duration totalDuration = Duration(milliseconds: 800);
+    final stepDuration = totalDuration ~/ steps;
+
+    for (int i = 1; i <= steps; i++) {
+      final double lng = from.lng + (to.lng - from.lng) * (i / steps);
+      final double lat = from.lat + (to.lat - from.lat) * (i / steps);
+
+      if (driverMarker != null && pointManager != null) {
+        // Directly change geometry
+        driverMarker!.geometry = Point(coordinates: Position(lng, lat));
+
+        // Update expects a single annotation
+        await pointManager!.update(driverMarker!);
+      }
+
+      await Future.delayed(stepDuration);
+    }
+  }
+
   Future<void> fetchAndUpdateDriverLocation() async {
     try {
+      print("Reloading location for driver ID: ${widget.driverId}");
       final res = await RideRepo.locateDriver(driverId: widget.driverId);
 
       if (res["status"] == true) {
         final newDriverPos = Position(
-          parseToDouble(res['data'][0]['latitude']),
           parseToDouble(res['data'][0]['longitude']),
+          parseToDouble(res['data'][0]['latitude']),
         );
-        await setMarkerPoint("Driver", newDriverPos);
 
-        // KSnackbar(context, message: "Captain Location Updated");
+        if (_currentDriverPos == null) {
+          // First time, just place the marker
+          _currentDriverPos = newDriverPos;
+          await setMarkerPoint("Driver", newDriverPos);
+        } else {
+          // Smooth transition
+          await _animateDriverMovement(_currentDriverPos!, newDriverPos);
+          _currentDriverPos = newDriverPos;
+        }
+
+        if (mounted) setState(() {});
+        print("Driver location updated smoothly.");
       }
     } catch (e) {
       KSnackbar(
@@ -222,6 +265,8 @@ class _Order_Detail_Map_WidgetState
                 await mapController!.scaleBar.updateSettings(
                   ScaleBarSettings(enabled: false),
                 );
+                // A small delay to ensure the map is fully loaded before trying to add annotations
+                await Future.delayed(const Duration(milliseconds: 500));
                 pointManager =
                     await mapController!.annotations
                         .createPointAnnotationManager();
@@ -229,34 +274,10 @@ class _Order_Detail_Map_WidgetState
                     await mapController!.annotations
                         .createPolylineAnnotationManager();
 
-                final driverLoc = await ref.read(
-                  locateDriverFuture(widget.driverId).future,
-                );
-
-                await mapController!.easeTo(
-                  CameraOptions(
-                    center: Point(
-                      coordinates: Position(
-                        parseToDouble(driverLoc['data'][0]['longitude']),
-                        parseToDouble(driverLoc['data'][0]['latitude']),
-                      ),
-                    ),
-                  ),
-                  MapAnimationOptions(),
-                );
-
                 setMarkerPoint("Pickup", widget.startPosition);
                 setMarkerPoint("Drop", widget.endPosition);
-                setMarkerPoint(
-                  "Driver",
-                  Position(
-                    parseToDouble(driverLoc['data'][0]['longitude']),
-                    parseToDouble(driverLoc['data'][0]['latitude']),
-                  ),
-                );
-
                 setPolyline();
-
+                await fetchAndUpdateDriverLocation();
                 await _fitCameraToBounds();
               },
             ),
@@ -300,7 +321,6 @@ class _Order_Detail_Map_WidgetState
                   },
                   child: Icon(Icons.zoom_out),
                 ),
-
                 SizedBox(height: 8),
                 FloatingActionButton(
                   mini: true,
@@ -310,6 +330,7 @@ class _Order_Detail_Map_WidgetState
                   },
                   child: Icon(Icons.arrow_upward),
                 ),
+                SizedBox(height: 8),
                 FloatingActionButton(
                   mini: true,
                   heroTag: 'moveSouth',
@@ -318,6 +339,7 @@ class _Order_Detail_Map_WidgetState
                   },
                   child: Icon(Icons.arrow_downward),
                 ),
+                SizedBox(height: 8),
                 FloatingActionButton(
                   mini: true,
                   heroTag: 'moveEast',
@@ -326,6 +348,7 @@ class _Order_Detail_Map_WidgetState
                   },
                   child: Icon(Icons.arrow_forward),
                 ),
+                SizedBox(height: 8),
                 FloatingActionButton(
                   mini: true,
                   heroTag: 'moveWest',

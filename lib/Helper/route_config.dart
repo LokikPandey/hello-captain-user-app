@@ -43,6 +43,7 @@ import '../Pages/Auth/Register_UI.dart';
 import '../Pages/Error/Server_Error_UI.dart';
 import '../Pages/Root_UI.dart';
 import 'Location_Helper.dart';
+import 'package:hello_captain_user/Pages/Service/Ride_complete.dart';
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
@@ -121,6 +122,17 @@ final routeProvider = Provider<GoRouter>((ref) {
       return null;
     },
     routes: [
+      GoRoute(
+        path: '/ride-complete/:transactionId/:driverId',
+        builder: (context, state) {
+          final transactionId = state.pathParameters['transactionId']!;
+          final driverId = state.pathParameters['driverId']!;
+          return RideCompletedUI(
+            transactionId: transactionId,
+            driverId: driverId,
+          );
+        },
+      ),
       GoRoute(
         path: '/server-error',
         builder: (context, state) => const Server_Error_UI(),

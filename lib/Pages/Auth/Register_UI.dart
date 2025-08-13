@@ -248,7 +248,7 @@ class _Register_UIState extends ConsumerState<Register_UI> {
                       height10,
                       KButton(
                         onPressed: login,
-                        label: "Singup",
+                        label: "Sign Up",
                         backgroundColor: Kolor.primary,
                         style: KButtonStyle.expanded,
                       ),

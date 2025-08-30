@@ -9,12 +9,12 @@ class MapboxRepo {
   ) async {
     try {
       final res = await Dio().get(
-        "https://api.mapbox.com/search/geocode/v6/reverse?longitude=${pos.lng}&latitude=${pos.lat}&access_token=$MAPBOX_ACCESS_TOKEN",
+        "https://maps.googleapis.com/maps/api/geocode/json?latlng=${pos.lat},${pos.lng}&key=$GMAP_KEY",
       );
-      if (res.data["features"] != null && res.data["features"].isNotEmpty) {
-        final address = res.data["features"][0];
+      if (res.statusCode == 200 && res.data["status"] == "OK") {
+        final address = res.data["results"][0];
         return {
-          "address": address["properties"]["full_address"],
+          "address": address["formatted_address"],
           "lng": pos.lng,
           "lat": pos.lat,
         };
@@ -31,14 +31,14 @@ class MapboxRepo {
   ) async {
     try {
       final res = await Dio().get(
-        "https://api.mapbox.com/directions/v5/mapbox/driving/${pickupPos.lng},${pickupPos.lat};${dropPos.lng},${dropPos.lat}?access_token=$MAPBOX_ACCESS_TOKEN",
+        "https://maps.googleapis.com/maps/api/directions/json?origin=${pickupPos.lat},${pickupPos.lng}&destination=${dropPos.lat},${dropPos.lng}&mode=driving&key=$GMAP_KEY",
       );
-      if (res.data["routes"] != null && res.data["routes"].isNotEmpty) {
+      if (res.statusCode == 200 && res.data["status"] == "OK") {
         final route = res.data["routes"][0];
         return {
-          "encodedPolylines": route["geometry"],
-          "duration": route["duration"],
-          "distance": route["distance"],
+          "encodedPolylines": route["overview_polyline"]["points"],
+          "duration": route["legs"][0]["duration"]["value"],
+          "distance": route["legs"][0]["distance"]["value"],
         };
       }
       return null;
@@ -61,7 +61,7 @@ class MapboxRepo {
   Future<List> searchPlace(String searchKey) async {
     try {
       final res = await Dio().get(
-        "https://maps.googleapis.com/maps/api/place/autocomplete/json?input=$searchKey&components=country:NP&key=$GMAP_KEY",
+        "https://maps.googleapis.com/maps/api/place/autocomplete/json?input=$searchKey&key=$GMAP_KEY",
       );
       // "https://api.mapbox.com/search/searchbox/v1/forward?q=$searchKey&country=NP&access_token=$MAPBOX_ACCESS_TOKEN");
 

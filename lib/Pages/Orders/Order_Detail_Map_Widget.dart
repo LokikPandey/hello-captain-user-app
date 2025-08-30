@@ -1,4 +1,6 @@
 import 'dart:async';
+import 'package:flutter/foundation.dart'; // <-- ADD THIS IMPORT
+import 'package:flutter/gestures.dart'; // <-- AND THIS ONE
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hello_captain_user/Repository/home_repo.dart';
@@ -43,9 +45,9 @@ class _Order_Detail_Map_WidgetState
   void initState() {
     super.initState();
     // Start the periodic timer to refresh the driver's location every 15 seconds
-    _refreshTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+    _refreshTimer = Timer.periodic(const Duration(seconds: 3), (timer) {
       fetchAndUpdateDriverLocation();
-      print("✅ Driver location refreshed by Timer at ${DateTime.now()}");
+      // print("✅ Driver location refreshed by Timer at ${DateTime.now()}");
     });
   }
 
@@ -127,6 +129,7 @@ class _Order_Detail_Map_WidgetState
           return;
       }
     } catch (e) {
+      if (!mounted) return;
       KSnackbar(context, message: "Marker Error: $e", error: true);
     } finally {
       isLoading.value = false;
@@ -155,6 +158,7 @@ class _Order_Detail_Map_WidgetState
         }
       }
     } catch (e) {
+      if (!mounted) return;
       KSnackbar(context, message: "Polyline Error: $e", error: true);
     } finally {
       isLoading.value = false;
@@ -162,6 +166,7 @@ class _Order_Detail_Map_WidgetState
   }
 
   Future<void> _fitCameraToBounds() async {
+    if (mapController == null) return;
     await mapController!.easeTo(
       await MapboxRepo.cameraOptionsForBounds(
         mapController: mapController!,
@@ -175,22 +180,21 @@ class _Order_Detail_Map_WidgetState
   Position? _currentDriverPos; // store last known position
 
   Future<void> _animateDriverMovement(Position from, Position to) async {
-    const int steps = 20; // higher = smoother
-    const Duration totalDuration = Duration(milliseconds: 800);
+    const int steps = 30; // higher = smoother
+    const Duration totalDuration = Duration(seconds: 2); // longer animation
     final stepDuration = totalDuration ~/ steps;
 
     for (int i = 1; i <= steps; i++) {
+      if (!mounted) return;
+      // Linear interpolation for smooth movement
       final double lng = from.lng + (to.lng - from.lng) * (i / steps);
       final double lat = from.lat + (to.lat - from.lat) * (i / steps);
 
       if (driverMarker != null && pointManager != null) {
-        // Directly change geometry
         driverMarker!.geometry = Point(coordinates: Position(lng, lat));
-
-        // Update expects a single annotation
+        // Update the marker's position on the map
         await pointManager!.update(driverMarker!);
       }
-
       await Future.delayed(stepDuration);
     }
   }
@@ -200,48 +204,29 @@ class _Order_Detail_Map_WidgetState
       print("Reloading location for driver ID: ${widget.driverId}");
       final res = await RideRepo.locateDriver(driverId: widget.driverId);
 
-      if (res["status"] == true) {
+      if (res["status"] == true && mounted) {
         final newDriverPos = Position(
           parseToDouble(res['data'][0]['longitude']),
           parseToDouble(res['data'][0]['latitude']),
         );
 
         if (_currentDriverPos == null) {
-          // First time, just place the marker
-          _currentDriverPos = newDriverPos;
+          // First time, just place the marker without animation
           await setMarkerPoint("Driver", newDriverPos);
         } else {
-          // Smooth transition
+          // Animate from the last known position to the new one
           await _animateDriverMovement(_currentDriverPos!, newDriverPos);
-          _currentDriverPos = newDriverPos;
         }
-
-        if (mounted) setState(() {});
-        print("Driver location updated smoothly.");
+        _currentDriverPos = newDriverPos; // Update the current position
       }
     } catch (e) {
-      KSnackbar(
-        context,
-        message: "Failed to fetch driver location: $e",
-        error: true,
-      );
-    }
-  }
-
-  Future<void> _moveMapBy({required double dx, required double dy}) async {
-    final cameraState = await mapController?.getCameraState();
-    if (cameraState != null) {
-      final currentCenter = cameraState.center;
-      final newCenter = Point(
-        coordinates: Position(
-          currentCenter.coordinates.lng + dx,
-          currentCenter.coordinates.lat + dy,
-        ),
-      );
-      mapController?.flyTo(
-        CameraOptions(center: newCenter),
-        MapAnimationOptions(duration: 500),
-      );
+      if (mounted) {
+        KSnackbar(
+          context,
+          message: "Failed to fetch driver location: $e",
+          error: true,
+        );
+      }
     }
   }
 
@@ -255,6 +240,9 @@ class _Order_Detail_Map_WidgetState
           ClipRRect(
             borderRadius: BorderRadius.circular(20),
             child: MapWidget(
+              gestureRecognizers: <Factory<OneSequenceGestureRecognizer>>{
+                Factory<EagerGestureRecognizer>(() => EagerGestureRecognizer()),
+              },
               cameraOptions: CameraOptions(
                 zoom: 8.5,
                 center: Point(coordinates: widget.startPosition),
@@ -262,11 +250,19 @@ class _Order_Detail_Map_WidgetState
               onMapCreated: (controller) async {
                 mapController = controller;
 
+                // Update gesture settings on the controller
+                await mapController!.gestures.updateSettings(
+                  GesturesSettings(
+                    scrollEnabled: true,
+                    pinchToZoomEnabled: true,
+                    rotateEnabled: true,
+                  ),
+                );
+
                 await mapController!.scaleBar.updateSettings(
                   ScaleBarSettings(enabled: false),
                 );
-                // A small delay to ensure the map is fully loaded before trying to add annotations
-                await Future.delayed(const Duration(milliseconds: 500));
+
                 pointManager =
                     await mapController!.annotations
                         .createPointAnnotationManager();
@@ -285,79 +281,12 @@ class _Order_Detail_Map_WidgetState
           Positioned(
             top: 10,
             right: 10,
-            child: Column(
-              children: [
-                FloatingActionButton(
-                  mini: true,
-                  heroTag: 'refresh',
-                  onPressed: fetchAndUpdateDriverLocation,
-                  child: Icon(Icons.refresh),
-                ),
-                SizedBox(height: 8),
-                FloatingActionButton(
-                  mini: true,
-                  heroTag: 'zoomIn',
-                  onPressed: () async {
-                    final state = await mapController?.getCameraState();
-                    final currentZoom = state?.zoom ?? 10;
-                    mapController?.flyTo(
-                      CameraOptions(zoom: currentZoom + 1),
-                      MapAnimationOptions(duration: 500),
-                    );
-                  },
-                  child: Icon(Icons.zoom_in),
-                ),
-                SizedBox(height: 8),
-                FloatingActionButton(
-                  mini: true,
-                  heroTag: 'zoomOut',
-                  onPressed: () async {
-                    final state = await mapController?.getCameraState();
-                    final currentZoom = state?.zoom ?? 10;
-                    mapController?.flyTo(
-                      CameraOptions(zoom: currentZoom - 1),
-                      MapAnimationOptions(duration: 500),
-                    );
-                  },
-                  child: Icon(Icons.zoom_out),
-                ),
-                SizedBox(height: 8),
-                FloatingActionButton(
-                  mini: true,
-                  heroTag: 'moveNorth',
-                  onPressed: () {
-                    _moveMapBy(dx: 0, dy: 0.005);
-                  },
-                  child: Icon(Icons.arrow_upward),
-                ),
-                SizedBox(height: 8),
-                FloatingActionButton(
-                  mini: true,
-                  heroTag: 'moveSouth',
-                  onPressed: () {
-                    _moveMapBy(dx: 0, dy: -0.005);
-                  },
-                  child: Icon(Icons.arrow_downward),
-                ),
-                SizedBox(height: 8),
-                FloatingActionButton(
-                  mini: true,
-                  heroTag: 'moveEast',
-                  onPressed: () {
-                    _moveMapBy(dx: 0.005, dy: 0);
-                  },
-                  child: Icon(Icons.arrow_forward),
-                ),
-                SizedBox(height: 8),
-                FloatingActionButton(
-                  mini: true,
-                  heroTag: 'moveWest',
-                  onPressed: () {
-                    _moveMapBy(dx: -0.005, dy: 0);
-                  },
-                  child: Icon(Icons.arrow_back),
-                ),
-              ],
+            child: FloatingActionButton(
+              mini: true,
+              heroTag: 'recenter',
+              onPressed: _fitCameraToBounds,
+              tooltip: 'Recenter Map',
+              child: const Icon(Icons.my_location),
             ),
           ),
         ],

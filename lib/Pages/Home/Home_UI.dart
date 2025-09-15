@@ -1,6 +1,9 @@
-// ignore_for_file: unused_result
+// lib/UI/Home_UI.dart
+
+// ignore_for_file: unused_result, non_constant_identifier_names
 
 import 'dart:convert';
+import 'dart:developer';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
@@ -12,6 +15,7 @@ import 'package:hello_captain_user/Essentials/Label.dart';
 import 'package:hello_captain_user/Essentials/kButton.dart';
 import 'package:hello_captain_user/Essentials/kCard.dart';
 import 'package:hello_captain_user/Essentials/kCarousel.dart';
+import 'package:hello_captain_user/Helper/Location_Helper.dart';
 import 'package:hello_captain_user/Repository/auth_repo.dart';
 import 'package:hello_captain_user/Repository/home_repo.dart';
 import 'package:hello_captain_user/Repository/news_repo.dart';
@@ -19,10 +23,9 @@ import 'package:hello_captain_user/Resources/app_config.dart';
 import 'package:hello_captain_user/Resources/colors.dart';
 import 'package:hello_captain_user/Resources/commons.dart';
 import 'package:hello_captain_user/Resources/constants.dart';
-import 'package:url_launcher/url_launcher.dart';
-import 'dart:developer';
 import 'package:simple_shadow/simple_shadow.dart';
 import 'package:skeletonizer/skeletonizer.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class Home_UI extends ConsumerStatefulWidget {
   const Home_UI({super.key});
@@ -32,51 +35,95 @@ class Home_UI extends ConsumerStatefulWidget {
 }
 
 class _Home_UIState extends ConsumerState<Home_UI> {
+  Map<String, dynamic>? pickupAddressData;
+  Map<String, dynamic>? dropAddressData;
+  bool isFetchingLocation = false;
+
   Future<void> _refresh() async {
+    final user = ref.read(userProvider);
+    if (user == null) return;
+
     final homeApiData = jsonEncode({
-      "id": ref.read(userProvider)!.id,
+      "id": user.id,
       "latitude": 0,
       "longitude": 0,
-      "phone_number": ref.read(userProvider)!.phone_number,
+      "phone_number": user.phone_number,
     });
     ref.refresh(allNewsFuture.future);
     await ref.refresh(homeFuture(homeApiData).future);
     await ref.refresh(serviceDataFuture.future);
   }
 
+  Future<void> _searchDropLocation() async {
+    setState(() {
+      isFetchingLocation = true;
+    });
+
+    try {
+      final myPos = await LocationService.getCurrentLocation();
+      if (myPos == null) {
+        throw "Could not fetch your current location. Please ensure location services are enabled.";
+      }
+      pickupAddressData = {
+        "address": "Current Location",
+        "lat": myPos.latitude,
+        "lng": myPos.longitude,
+      };
+
+      final res = await context.push("/search-place") as Map<String, dynamic>?;
+
+      if (res != null) {
+        setState(() {
+          dropAddressData = res;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(e.toString())));
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          isFetchingLocation = false;
+        });
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    final user = ref.watch(userProvider);
+    if (user == null) {
+      return  KScaffold(body: Center(child: CircularProgressIndicator()));
+    }
+
     final homeApiData = jsonEncode({
-      "id": ref.read(userProvider)!.id,
+      "id": user.id,
       "latitude": 0,
       "longitude": 0,
-      "phone_number": ref.read(userProvider)!.phone_number,
+      "phone_number": user.phone_number,
     });
     final homeData = ref.watch(homeFuture(homeApiData));
 
-    final user = ref.watch(userProvider);
     return RefreshIndicator(
       onRefresh: _refresh,
       child: KScaffold(
         appBar: AppBar(
           surfaceTintColor: const Color.fromARGB(255, 255, 242, 220),
           automaticallyImplyLeading: false,
-          // title: CircleAvatar(
-          //   backgroundImage: AssetImage("$kImagePath/logo.png"),
-          //   backgroundColor: Kolor.scaffold,
-          // ),
           title: Image.asset(
             "$kImagePath/h_c_logoo.png",
-            height: 200, // adjust as needed
+            height: 200,
             fit: BoxFit.contain,
           ),
-          backgroundColor: Color(0xFFFFF5E5),
+          backgroundColor: const Color(0xFFFFF5E5),
           actions: [
-            Icon(Icons.account_balance_wallet_outlined),
+            const Icon(Icons.account_balance_wallet_outlined),
             width5,
             Label(
               homeData.when(
-                data: (data) => kCurrencyFormat(user?.balance ?? 0),
+                data: (data) => kCurrencyFormat(user.balance),
                 error: (error, stackTrace) => "-",
                 loading: () => "...",
               ),
@@ -87,402 +134,324 @@ class _Home_UIState extends ConsumerState<Home_UI> {
         ),
         body: SafeArea(
           child: SingleChildScrollView(
-            physics: AlwaysScrollableScrollPhysics(),
+            physics: const AlwaysScrollableScrollPhysics(),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // ... existing code before homeData.when
+                _buildSearchSection(),
                 homeData.when(
-                  data:
-                      (data) => Container(
-                        // Outer Container to hold the background
+                  data: (data) => Container(
+                    decoration: const BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [
+                          Color(0xFFFFFAF0),
+                          Color.fromARGB(255, 255, 242, 220),
+                        ],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 8,
+                      ),
+                      child: ClipRRect(
+                        borderRadius: const BorderRadius.all(
+                          Radius.circular(16),
+                        ),
+                        child: SizedBox(
+                          height: 200,
+                          child: KCarousel(
+                            isLooped: true,
+                            showIndicator: false,
+                            children: (data["slider"] as List)
+                                .map(
+                                  (e) => GestureDetector(
+                                    onTap: () async {
+                                      try {
+                                        final promotionType =
+                                            e['promotion_type']?.toString();
+                                        final hardcodedUrl =
+                                            'http://dynamic-link-two.vercel.app';
+
+                                        if (promotionType == 'service') {
+                                          final title =
+                                              e['title']?.toString() ?? '';
+                                          final service =
+                                              e['service']?.toString() ?? '';
+                                          final icon =
+                                              e['icon']?.toString() ?? '';
+
+                                          String path = "";
+                                          switch (title) {
+                                            case "Passenger Transportation":
+                                              path =
+                                                  "/passenger-transportation";
+                                              break;
+                                            case "Rental":
+                                              path = "/rental";
+                                              break;
+                                            case "Shipment":
+                                              path = "/shipment";
+                                              break;
+                                            case "Purchasing Service":
+                                              path = "/purchasing-service";
+                                              break;
+                                            default:
+                                              log("Unknown service title: $title");
+                                              return;
+                                          }
+
+                                          context.push(
+                                            path,
+                                            extra: {
+                                              ...e as Map<String, dynamic>,
+                                              "serviceName": service,
+                                              "serviceImage":
+                                                  "$serviceImageBaseUrl/$icon",
+                                            },
+                                          );
+                                        } else {
+                                          final uri = Uri.parse(
+                                            hardcodedUrl,
+                                          );
+                                          if (await canLaunchUrl(uri)) {
+                                            await launchUrl(
+                                              uri,
+                                              mode: LaunchMode
+                                                  .externalApplication,
+                                            );
+                                          } else {
+                                            log("Could not launch $hardcodedUrl");
+                                          }
+                                        }
+                                      } catch (err, stack) {
+                                        log("Error in onTap: $err\n$stack");
+                                      }
+                                    },
+                                    child: Container(
+                                      decoration: BoxDecoration(
+                                        image: DecorationImage(
+                                          image: NetworkImage(
+                                            "$promoImageBaseUrl/${e["photo"]}",
+                                          ),
+                                          fit: BoxFit.cover,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                )
+                                .toList(),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  error: (error, stackTrace) => SizedBox(
+                    child: KCard(
+                      height: 200,
+                      width: double.infinity,
+                      radius: 0,
+                      child: Center(
+                        child: Icon(
+                          Icons.photo,
+                          color: Kolor.hint,
+                          size: 50,
+                        ),
+                      ),
+                    ),
+                  ),
+                  loading: () => Skeletonizer(
+                    child: Skeleton.leaf(
+                      child: const KCard(
+                        height: 200,
+                        width: double.infinity,
+                        radius: 0,
+                      ),
+                    ),
+                  ),
+                  skipLoadingOnRefresh: false,
+                ),
+                
+                Container(
+                  decoration: const BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        Color(0xFFFFFAF0), // Light pastel background
+                        Color(0xFFFFF2DC),
+                      ],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.only(bottom: 0),
+                    child: Image.asset(
+                      'assets/images/6.png',
+                      width: double.infinity,
+                      height: 50,
+                      fit: BoxFit.cover,
+                    ),
+                  ),
+                ),
+
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    homeData.when(
+                      data: (data) => Container(
+                        decoration: const BoxDecoration(
+                          gradient: LinearGradient(
+                              colors: [Color(0xFFFFFAF0), Color(0xFFFFF2DC)],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight),
+                        ),
+                        child: SizedBox(
+                          height: 170,
+                          child: Stack(
+                            children: [
+                              Center(
+                                child: SingleChildScrollView(
+                                  scrollDirection: Axis.horizontal,
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 5,
+                                  ),
+                                  child: Row(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.center,
+                                    children: [
+                                      ...List.generate(
+                                        (data["service"] as List)
+                                            .take(5)
+                                            .length,
+                                        (index) {
+                                          final category =
+                                              (data["service"] as List)[index];
+                                          return Padding(
+                                            padding: const EdgeInsets.only(
+                                              right: 5,
+                                            ),
+                                            child: SizedBox(
+                                              width: 125,
+                                              height: 150,
+                                              child: CategoryTile(
+                                                index: index,
+                                                data: category
+                                                    as Map<String, dynamic>,
+                                                type: category["title"],
+                                                id: "${category["id"]}",
+                                                label: category["service"],
+                                                image:
+                                                    "$serviceImageBaseUrl/${category["icon"]}",
+                                              ),
+                                            ),
+                                          );
+                                        },
+                                      ),
+                                      Padding(
+                                        padding: const EdgeInsets.only(
+                                          right: 5,
+                                        ),
+                                        child: Transform.translate(
+                                          offset: const Offset(0, -20),
+                                          child: SizedBox(
+                                            width: 100,
+                                            height: 100,
+                                            child: _more(
+                                              context,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      error: (error, stackTrace) => Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          GridView.count(
+                            crossAxisCount: 3,
+                            shrinkWrap: true,
+                            padding: const EdgeInsets.symmetric(horizontal: 10),
+                            physics: const NeverScrollableScrollPhysics(),
+                            children: List.generate(
+                              6,
+                              (index) => const KCard(
+                                margin: EdgeInsets.all(10),
+                                height: 120,
+                                width: double.infinity,
+                              ),
+                            ),
+                          ),
+                          SimpleShadow(
+                            sigma: 30,
+                            opacity: .3,
+                            child: Column(
+                              children: [
+                                Label("Oops!", weight: 900).regular,
+                                Label("$error").regular,
+                                height10,
+                                KButton(
+                                  onPressed: () async {
+                                    await _refresh();
+                                  },
+                                  label: "Retry",
+                                  radius: 5,
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 20,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                      loading: () => Container(
                         decoration: const BoxDecoration(
                           gradient: LinearGradient(
                             colors: [
-                              Color(0xFFFFFAF0), // Light pastel background
-                              Color.fromARGB(255, 255, 242, 220),
+                              Color(0xFFFFFAF0), // Light pastel top
+                              Color(0xFFFFF2DC), // Light pastel bottom
                             ],
                             begin: Alignment.topLeft,
                             end: Alignment.bottomRight,
                           ),
                         ),
-                        child: Padding(
+                        child: GridView.count(
+                          crossAxisCount: 3,
+                          shrinkWrap: true,
                           padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 8,
+                            horizontal: 10,
                           ),
-                          child: ClipRRect(
-                            // Removed the inner Container and its decoration
-                            borderRadius: const BorderRadius.all(
-                              Radius.circular(16),
-                            ),
-                            child: SizedBox(
-                              height: 200,
-                              child: KCarousel(
-                                isLooped: true,
-                                showIndicator: false,
-                                children:
-                                    (data["slider"] as List)
-                                        .map(
-                                          (e) => GestureDetector(
-                                            onTap: () async {
-                                              try {
-                                                final promotionType =
-                                                    e['promotion_type']
-                                                        ?.toString();
-                                                final hardcodedUrl =
-                                                    'http://dynamic-link-two.vercel.app';
-
-                                                if (promotionType ==
-                                                    'service') {
-                                                  final title =
-                                                      e['title']?.toString() ??
-                                                      '';
-                                                  final service =
-                                                      e['service']
-                                                          ?.toString() ??
-                                                      '';
-                                                  final icon =
-                                                      e['icon']?.toString() ??
-                                                      '';
-
-                                                  String path = "";
-                                                  switch (title) {
-                                                    case "Passenger Transportation":
-                                                      path =
-                                                          "/passenger-transportation";
-                                                      break;
-                                                    case "Rental":
-                                                      path = "/rental";
-                                                      break;
-                                                    case "Shipment":
-                                                      path = "/shipment";
-                                                      break;
-                                                    case "Purchasing Service":
-                                                      path =
-                                                          "/purchasing-service";
-                                                      break;
-                                                    default:
-                                                      log(
-                                                        "Unknown service title: $title",
-                                                      );
-                                                      return;
-                                                  }
-
-                                                  context.push(
-                                                    path,
-                                                    extra: {
-                                                      ...e
-                                                          as Map<
-                                                            String,
-                                                            dynamic
-                                                          >,
-                                                      "serviceName": service,
-                                                      "serviceImage":
-                                                          serviceImageBaseUrl +
-                                                          icon,
-                                                    },
-                                                  );
-                                                } else {
-                                                  final uri = Uri.parse(
-                                                    hardcodedUrl,
-                                                  );
-                                                  if (await canLaunchUrl(uri)) {
-                                                    await launchUrl(
-                                                      uri,
-                                                      mode:
-                                                          LaunchMode
-                                                              .externalApplication,
-                                                    );
-                                                  } else {
-                                                    log(
-                                                      "Could not launch $hardcodedUrl",
-                                                    );
-                                                  }
-                                                }
-                                              } catch (err, stack) {
-                                                log(
-                                                  "Error in onTap: $err\n$stack",
-                                                );
-                                              }
-                                            },
-                                            child: Container(
-                                              decoration: BoxDecoration(
-                                                image: DecorationImage(
-                                                  image: NetworkImage(
-                                                    "$promoImageBaseUrl/${e["photo"]}",
-                                                  ),
-                                                  fit: BoxFit.cover,
-                                                ),
-                                              ),
-                                            ),
-                                          ),
-                                        )
-                                        .toList(),
+                          physics: const NeverScrollableScrollPhysics(),
+                          children: List.generate(
+                            3,
+                            (index) => Skeletonizer(
+                              child: Skeleton.leaf(
+                                enabled: true,
+                                child: const KCard(
+                                  margin: EdgeInsets.all(10),
+                                  height: 60,
+                                  width: double.infinity,
+                                ),
                               ),
                             ),
                           ),
                         ),
                       ),
-
-                  error:
-                      (error, stackTrace) => SizedBox(
-                        child: KCard(
-                          height: 200,
-                          width: double.infinity,
-                          radius: 0,
-                          child: Center(
-                            child: Icon(
-                              Icons.photo,
-                              color: Kolor.hint,
-                              size: 50,
-                            ),
-                          ),
-                        ),
-                      ),
-                  loading:
-                      () => Skeletonizer(
-                        child: Skeleton.leaf(
-                          child: KCard(
-                            height: 200,
-                            width: double.infinity,
-                            radius: 0,
-                          ),
-                        ),
-                      ),
-                  skipLoadingOnRefresh: false,
-                ),
-                kHeight(0),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Padding(
-                    //   padding: const EdgeInsets.symmetric(
-                    //     horizontal: kPadding,
-                    //   ).copyWith(bottom: 10),
-                    //   child: Label("Our Services", fontSize: 16).regular,
-                    // ),
-                    homeData.when(
-                      data:
-                          (data) => Container(
-                            decoration: const BoxDecoration(
-                              gradient: LinearGradient(
-                                colors: [Color(0xFFFFFAF0), Color(0xFFFFF2DC)],
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
-                              ),
-                            ),
-                            child: SizedBox(
-                              height: 170,
-                              child: Stack(
-                                children: [
-                                  Center(
-                                    child: SingleChildScrollView(
-                                      scrollDirection: Axis.horizontal,
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 5,
-                                      ),
-                                      child: Row(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.center,
-                                        children: [
-                                          ...List.generate(
-                                            (data["service"] as List)
-                                                .take(5)
-                                                .length,
-                                            (index) {
-                                              final category =
-                                                  (data["service"]
-                                                      as List)[index];
-                                              return Padding(
-                                                padding: const EdgeInsets.only(
-                                                  right: 5,
-                                                ),
-                                                child: SizedBox(
-                                                  width: 125,
-                                                  height: 150,
-                                                  child: CategoryTile(
-                                                    index: index,
-                                                    data:
-                                                        category
-                                                            as Map<
-                                                              String,
-                                                              dynamic
-                                                            >,
-                                                    type: category["title"],
-                                                    id: "${category["id"]}",
-                                                    label: category["service"],
-                                                    image:
-                                                        "$serviceImageBaseUrl/${category["icon"]}",
-                                                  ),
-                                                ),
-                                              );
-                                            },
-                                          ),
-                                          Padding(
-                                            padding: const EdgeInsets.only(
-                                              right: 5,
-                                            ),
-                                            child: Transform.translate(
-                                              offset: Offset(
-                                                0,
-                                                -20,
-                                              ), // Move up by 10 pixels
-                                              child: SizedBox(
-                                                width: 100,
-                                                height: 100,
-                                                child: _more(
-                                                  context,
-                                                ), // ← ADD MORE BUTTON HERE
-                                              ),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ),
-                                  // Positioned(
-                                  //   right: 8,
-                                  //   top: 0,
-                                  //   bottom: 40,
-                                  //   child: IgnorePointer(
-                                  //     child: Container(
-                                  //       width: 30,
-                                  //       alignment: Alignment.center,
-                                  //       child: Container(
-                                  //         decoration: const BoxDecoration(
-                                  //           color: Color.fromARGB(
-                                  //             213,
-                                  //             255,
-                                  //             140,
-                                  //             0,
-                                  //           ),
-                                  //           shape: BoxShape.circle,
-                                  //         ),
-                                  //         padding: EdgeInsets.all(6),
-                                  //         child: Icon(
-                                  //           Icons.arrow_forward_ios_rounded,
-                                  //           size: 16,
-                                  //           color: Colors.white,
-                                  //           weight: 900,
-                                  //         ),
-                                  //       ),
-                                  //     ),
-                                  //   ),
-                                  // ),
-                                ],
-                              ),
-                            ),
-                          ),
-
-                      error:
-                          (error, stackTrace) => Stack(
-                            alignment: Alignment.center,
-                            children: [
-                              GridView.count(
-                                crossAxisCount: 3,
-                                shrinkWrap: true,
-
-                                padding: EdgeInsets.symmetric(horizontal: 10),
-                                physics: NeverScrollableScrollPhysics(),
-                                children: List.generate(
-                                  6,
-                                  (index) => KCard(
-                                    margin: EdgeInsets.all(10),
-                                    height: 120,
-                                    width: double.infinity,
-                                  ),
-                                ),
-                              ),
-                              SimpleShadow(
-                                sigma: 30,
-                                opacity: .3,
-                                child: Column(
-                                  children: [
-                                    Label("Oops!", weight: 900).regular,
-                                    Label("$error").regular,
-                                    height10,
-                                    KButton(
-                                      onPressed: () async {
-                                        await _refresh();
-                                      },
-                                      label: "Retry",
-                                      radius: 5,
-                                      padding: EdgeInsets.symmetric(
-                                        horizontal: 20,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                      loading:
-                          () => Container(
-                            decoration: const BoxDecoration(
-                              gradient: LinearGradient(
-                                colors: [
-                                  Color(0xFFFFFAF0), // Light pastel top
-                                  Color(0xFFFFF2DC), // Light pastel bottom
-                                ],
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
-                              ),
-                            ),
-                            child: GridView.count(
-                              crossAxisCount: 3,
-                              shrinkWrap: true,
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 10,
-                              ),
-                              physics: const NeverScrollableScrollPhysics(),
-                              children: List.generate(
-                                3,
-                                (index) => Skeletonizer(
-                                  child: Skeleton.leaf(
-                                    enabled: true,
-                                    child: KCard(
-                                      margin: const EdgeInsets.all(10),
-                                      height: 60,
-                                      width: double.infinity,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
                       skipLoadingOnRefresh: false,
                     ),
                   ],
                 ),
-
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // 🖼️ Insert image here
-                    Container(
-                      decoration: const BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [
-                            Color(0xFFFFFAF0), // Light pastel background
-                            Color(0xFFFFF2DC),
-                          ],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ),
-                      ),
-                      child: Padding(
-                        padding: const EdgeInsets.only(bottom: 0),
-                        child: Image.asset(
-                          'assets/images/6.png',
-                          width: double.infinity,
-                          height: 50,
-                          fit: BoxFit.cover,
-                        ),
-                      ),
-                    ),
-
-                    // height10,
                     Container(
                       decoration: const BoxDecoration(
                         gradient: LinearGradient(
@@ -505,34 +474,29 @@ class _Home_UIState extends ConsumerState<Home_UI> {
                             Label(
                               "Famous Locations in Nepal",
                               fontSize: 16,
-                              color: Color.fromARGB(255, 231, 140, 3),
+                              color: const Color.fromARGB(255, 231, 140, 3),
                               weight: 900,
                             ).regular,
                             TextButton(
                               onPressed: () => context.push("/all-news"),
-                              child:
-                                  Label(
-                                    "View All",
-                                    color: Color.fromARGB(255, 121, 74, 2),
-                                  ).regular,
+                              child:  Label(
+                                "View All",
+                                color: Color.fromARGB(255, 121, 74, 2),
+                              ).regular,
                             ),
                           ],
                         ),
                       ),
                     ),
-
-                    // height10,
                     newsSection(),
-
                     Container(
                       height: 50,
                       width: double.infinity,
                       decoration: const BoxDecoration(
                         gradient: LinearGradient(
-                          colors: [Color(0xFFFFFAF0), Color(0xFFFFF2DC)],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ),
+                            colors: [Color(0xFFFFFAF0), Color(0xFFFFF2DC)],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight),
                       ),
                     ),
                   ],
@@ -545,6 +509,93 @@ class _Home_UIState extends ConsumerState<Home_UI> {
     );
   }
 
+  // --- MODIFIED: The Search Section Widget ---
+  Widget _buildSearchSection() {
+    return Container(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            Color(0xFFFFFAF0),
+            Color(0xFFFFF2DC),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+      ),
+      padding: const EdgeInsets.all(kPadding),
+      child: Row(
+        children: [
+          Expanded(child: _locationInputWidget()),
+          width10,
+          // --- FIX: Replaced KButton with a standard ElevatedButton wrapped in SizedBox ---
+          SizedBox(
+            height: 55,
+            width: 55,
+            child: ElevatedButton(
+              onPressed: isFetchingLocation || dropAddressData == null
+                  ? null // Button is disabled while fetching or if no drop location is set
+                  : () {
+                      context.push(
+                        "/passenger-transportation-2",
+                        extra: {
+                          "initialPickup": pickupAddressData,
+                          "initialDrop": dropAddressData,
+                        },
+                      );
+                    },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color.fromARGB(255, 255, 112, 35),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(50),
+                ),
+                padding: EdgeInsets.zero, // Removes default padding
+              ),
+              child: isFetchingLocation
+                  ? const SizedBox(
+                      height: 24,
+                      width: 24,
+                      child: CircularProgressIndicator(
+                        color: Color.fromARGB(255, 112, 112, 112),
+                        strokeWidth: 2,
+                      ),
+                    )
+                  : const Icon(Icons.arrow_forward, color: Colors.white),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _locationInputWidget() {
+    return KCard(
+      onTap: _searchDropLocation,
+      borderWidth: 1,
+      height: 55, // Ensure height matches the button
+      color: Kolor.scaffold,
+      child: Row(
+        spacing: 15,
+        children: [
+          const Icon(
+            Icons.search,
+            size: 27,
+            color: Color.fromARGB(255, 255, 89, 0),
+          ),
+          Expanded(
+            child: (dropAddressData == null)
+                ? Label("Where to?", fontSize: 15).title
+                : Text(
+                    dropAddressData!["address"],
+                    style: const TextStyle(
+                        fontSize: 15, fontWeight: FontWeight.bold),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+          ),
+        ],
+      ),
+    );
+  }
+
   KCard _more(BuildContext context) {
     return KCard(
       onTap: () {
@@ -553,12 +604,12 @@ class _Home_UIState extends ConsumerState<Home_UI> {
           builder: (context) => catgeoryModal(),
         );
       },
-      margin: EdgeInsets.all(10),
+      margin: const EdgeInsets.all(10),
       height: 100,
       width: 100,
-      radius: 50, // Half of height/width → circle
+      radius: 50,
       color: Colors.white,
-      child: Column(
+      child: const Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           CircleAvatar(
@@ -566,8 +617,6 @@ class _Home_UIState extends ConsumerState<Home_UI> {
             backgroundColor: Kolor.scaffold,
             child: Icon(Icons.keyboard_arrow_down_rounded, size: 30),
           ),
-          // SizedBox(height: 2),
-          // Label("More", fontSize: 11).regular,
         ],
       ),
     );
@@ -576,20 +625,22 @@ class _Home_UIState extends ConsumerState<Home_UI> {
   Widget catgeoryModal() {
     return Consumer(
       builder: (context, ref, _) {
+        final user = ref.watch(userProvider);
+        if (user == null) return const Center(child: Text("Please log in."));
+
         final homeData = ref.watch(
           homeFuture(
             jsonEncode({
-              "id": ref.read(userProvider)!.id,
+              "id": user.id,
               "latitude": 0,
               "longitude": 0,
-              "phone_number": ref.read(userProvider)!.phone_number,
+              "phone_number": user.phone_number,
             }),
           ),
         );
         return SingleChildScrollView(
           child: Container(
-            // padding: EdgeInsets.all(kPadding),
-            decoration: BoxDecoration(
+            decoration: const BoxDecoration(
               color: Kolor.scaffold,
               borderRadius: BorderRadius.vertical(top: Radius.circular(15)),
             ),
@@ -598,19 +649,19 @@ class _Home_UIState extends ConsumerState<Home_UI> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Padding(
-                    padding: EdgeInsets.all(kPadding),
+                    padding: const EdgeInsets.all(kPadding),
                     child: Label("Our Services").title,
                   ),
                   MasonryGridView(
                     gridDelegate:
-                        SliverSimpleGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 3,
-                        ),
+                        const SliverSimpleGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 3,
+                    ),
                     shrinkWrap: true,
-                    physics: NeverScrollableScrollPhysics(),
+                    physics: const NeverScrollableScrollPhysics(),
                     mainAxisSpacing: 0,
                     crossAxisSpacing: 0,
-                    padding: EdgeInsets.symmetric(horizontal: 10),
+                    padding: const EdgeInsets.symmetric(horizontal: 10),
                     children: [
                       ...homeData.when(
                         data: (data) {
@@ -630,16 +681,15 @@ class _Home_UIState extends ConsumerState<Home_UI> {
                             },
                           );
                         },
-                        error: (error, stackTrace) => [SizedBox()],
-                        loading:
-                            () => List.generate(
-                              6,
-                              (index) => KCard(
-                                margin: EdgeInsets.all(10),
-                                height: 120,
-                                width: double.infinity,
-                              ),
-                            ),
+                        error: (error, stackTrace) => [const SizedBox()],
+                        loading: () => List.generate(
+                          6,
+                          (index) => const KCard(
+                            margin: EdgeInsets.all(10),
+                            height: 120,
+                            width: double.infinity,
+                          ),
+                        ),
                       ),
                     ],
                   ),
@@ -663,71 +713,60 @@ class _Home_UIState extends ConsumerState<Home_UI> {
           width: double.infinity,
           decoration: const BoxDecoration(
             gradient: LinearGradient(
-              colors: [Color(0xFFFFFAF0), Color(0xFFFFF2DC)],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
+                colors: [Color(0xFFFFFAF0), Color(0xFFFFF2DC)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight),
           ),
           padding: const EdgeInsets.symmetric(vertical: 12),
           child: newsData.when(
-            data:
-                (data) => SingleChildScrollView(
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  scrollDirection: Axis.horizontal,
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children:
-                        (data['data'] as List)
-                            .map(
-                              (e) => Padding(
-                                padding: const EdgeInsets.only(right: 12),
-                                child: SizedBox(
-                                  width:
-                                      MediaQuery.of(context).size.width / 2 -
-                                      15, // ~2 cards per screen
-                                  child: NewsCard(
-                                    data: e,
-                                    isSaved: (savedNewsData.value ?? []).any(
-                                      (element) =>
-                                          element["news_id"] == e["news_id"],
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            )
-                            .toList(),
-                  ),
-                ),
-            error:
-                (error, stackTrace) =>
-                    Center(child: kNoData(subtitle: "Unable To Fetch News!")),
-            loading:
-                () => SingleChildScrollView(
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  scrollDirection: Axis.horizontal,
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children:
-                        [1, 2]
-                            .map(
-                              (e) => Padding(
-                                padding: const EdgeInsets.only(right: 12),
-                                child: Skeletonizer(
-                                  child: Skeleton.leaf(
-                                    child: KCard(
-                                      height: 150,
-                                      width:
-                                          MediaQuery.of(context).size.width /
-                                              2 -
-                                          24,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            )
-                            .toList(),
-                  ),
-                ),
+            data: (data) => SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: (data['data'] as List)
+                    .map(
+                      (e) => Padding(
+                        padding: const EdgeInsets.only(right: 12),
+                        child: SizedBox(
+                          width: MediaQuery.of(context).size.width / 2 - 15,
+                          child: NewsCard(
+                            data: e,
+                            isSaved: (savedNewsData.value ?? []).any(
+                              (element) => element["news_id"] == e["news_id"],
+                            ),
+                          ),
+                        ),
+                      ),
+                    )
+                    .toList(),
+              ),
+            ),
+            error: (error, stackTrace) =>
+                Center(child: kNoData(subtitle: "Unable To Fetch News!")),
+            loading: () => SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [1, 2]
+                    .map(
+                      (e) => Padding(
+                        padding: const EdgeInsets.only(right: 12),
+                        child: Skeletonizer(
+                          child: Skeleton.leaf(
+                            child: KCard(
+                              height: 150,
+                              width:
+                                  MediaQuery.of(context).size.width / 2 - 24,
+                            ),
+                          ),
+                        ),
+                      ),
+                    )
+                    .toList(),
+              ),
+            ),
           ),
         );
       },

@@ -17,6 +17,7 @@ import 'package:hello_captain_user/Pages/Service/Locate_Driver_UI.dart';
 import 'package:hello_captain_user/Pages/Service/Merchant/Merchant_Checkout_UI.dart';
 import 'package:hello_captain_user/Pages/Service/Merchant/Merchant_Detail_UI.dart';
 import 'package:hello_captain_user/Pages/Service/Passenger_Transportation_UI.dart';
+import 'package:hello_captain_user/Pages/Service/Passenger_Transportation_UI_2.dart';
 import 'package:hello_captain_user/Pages/Chat/Chat_Detail_UI.dart';
 import 'package:hello_captain_user/Pages/Chat/Chat_UI.dart';
 import 'package:hello_captain_user/Pages/Places/Search_Place_UI.dart';
@@ -218,6 +219,16 @@ final routeProvider = Provider<GoRouter>((ref) {
               serviceName: (state.extra as Map<String, dynamic>)['serviceName'],
             ),
       ),
+      GoRoute(
+      path: '/passenger-transportation-2',
+      builder: (context, state) {
+        final extra = state.extra as Map<String, dynamic>;
+        return PassengerTransportationUI2(
+          initialPickup: extra['initialPickup'] as Map<String, dynamic>,
+          initialDrop: extra['initialDrop'] as Map<String, dynamic>,
+        );
+      },
+    ),
       GoRoute(
         path: "/rental",
         builder:

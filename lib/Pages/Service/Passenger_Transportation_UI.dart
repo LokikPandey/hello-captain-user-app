@@ -116,7 +116,6 @@ class _Passenger_Transportation_UIState
       servicediscount = parseToDouble(
         widget.serviceData["discount"].toString(),
       );
-      // print("Insurance from serviceData: $insurance");
     });
   }
 
@@ -150,7 +149,7 @@ class _Passenger_Transportation_UIState
   }
 
   Future<void> sendNotificationToDrivers(
-    Map<String, dynamic> transactionData,
+      Map<String, dynamic> transactionData,
   ) async {
     try {
       final user = ref.read(userProvider);
@@ -210,35 +209,31 @@ class _Passenger_Transportation_UIState
       double lng = 0;
       double lat = 0;
       if (bounds == null) {
-        // Check whether it is iOS or Android. If Android, then the below commented line will execute.
         if (Platform.isAndroid) {
           final status = await Permission.locationWhenInUse.request();
 
           if (status.isDenied || status.isPermanentlyDenied) {
             await showDialog(
               context: context,
-              builder:
-                  (context) => AlertDialog(
-                    title: Label("Location Permission").title,
-                    content:
-                        Label(
-                          "Location permission is required to use this feature. Please enable it in the app settings.",
-                        ).regular,
-                    actions: [
-                      TextButton(
-                        onPressed: () => Navigator.of(context).pop(),
-                        child:
-                            Label("Cancel", color: StatusText.danger).regular,
-                      ),
-                      TextButton(
-                        onPressed: () async {
-                          Navigator.of(context).pop();
-                          await openAppSettings();
-                        },
-                        child: Label("Open Settings").regular,
-                      ),
-                    ],
+              builder: (context) => AlertDialog(
+                title: Label("Location Permission").title,
+                content: Label(
+                  "Location permission is required to use this feature. Please enable it in the app settings.",
+                ).regular,
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    child: Label("Cancel", color: StatusText.danger).regular,
                   ),
+                  TextButton(
+                    onPressed: () async {
+                      Navigator.of(context).pop();
+                      await openAppSettings();
+                    },
+                    child: Label("Open Settings").regular,
+                  ),
+                ],
+              ),
             );
             return;
           }
@@ -249,26 +244,25 @@ class _Passenger_Transportation_UIState
           if (!isServiceOn) {
             await showDialog(
               context: context,
-              builder:
-                  (context) => AlertDialog(
-                    title: Text("Location Service"),
-                    content: Text(
-                      "Location service is required to use this feature. Please enable it.",
-                    ),
-                    actions: [
-                      TextButton(
-                        onPressed: () => Navigator.of(context).pop(),
-                        child: Text("Cancel"),
-                      ),
-                      TextButton(
-                        onPressed: () async {
-                          Navigator.of(context).pop();
-                          await location.requestService();
-                        },
-                        child: Text("Enable Service"),
-                      ),
-                    ],
+              builder: (context) => AlertDialog(
+                title: Text("Location Service"),
+                content: Text(
+                  "Location service is required to use this feature. Please enable it.",
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    child: Text("Cancel"),
                   ),
+                  TextButton(
+                    onPressed: () async {
+                      Navigator.of(context).pop();
+                      await location.requestService();
+                    },
+                    child: Text("Enable Service"),
+                  ),
+                ],
+              ),
             );
             return;
           }
@@ -303,10 +297,10 @@ class _Passenger_Transportation_UIState
   }
 
   Future<void> setMarkerPoint(
-    String type,
-    Position pos, {
-    double bearing = 0,
-  }) async {
+      String type,
+      Position pos, {
+        double bearing = 0,
+      }) async {
     try {
       isLoading.value = true;
 
@@ -343,14 +337,12 @@ class _Passenger_Transportation_UIState
 
         case "Driver":
           final serviceDetailsList = ref.read(serviceDetailsProvider);
-
-          // Now we will find that element from list where widget.serviceData["service_id"] = serviceDetailsList[i]["service_id"]
           final Map<dynamic, dynamic>? serviceDetails = serviceDetailsList
               .firstWhere(
                 (element) =>
-                    element["service_id"] == widget.serviceData["service_id"],
-                orElse: () => null,
-              );
+            element["service_id"] == widget.serviceData["service_id"],
+            orElse: () => null,
+          );
 
           final mapsIconsId = serviceDetails?["icon_driver"] ?? "0";
 
@@ -393,17 +385,14 @@ class _Passenger_Transportation_UIState
         if (res != null) {
           distance = parseToDouble(res["distance"]);
           duration = parseToDouble(res["duration"]);
-
           polylineManager.deleteAll();
           final coordinatesList = MapboxRepo().decodePolylines(
             res["encodedPolylines"],
           );
-
           PolylineAnnotationOptions polylines = PolylineAnnotationOptions(
             geometry: LineString(coordinates: coordinatesList),
             lineWidth: 3,
           );
-
           await polylineManager.create(polylines);
         }
       }
@@ -424,7 +413,6 @@ class _Passenger_Transportation_UIState
 
       if (res != null) {
         await setMarkerPoint(type, pos);
-
         setState(() {
           if (type == "Pickup") {
             pickupAddressData = res;
@@ -451,25 +439,13 @@ class _Passenger_Transportation_UIState
 
   Future<void> fetchSubscriptionDetails() async {
     try {
-      // re-init
       subscriptionPercent = 0;
       subscriptionMaxDiscount = 0;
-
-      //call api
       final subData = await ref.read(activeSubscriptionFuture.future);
-      // log("$subData");
-
-      // check if ext id exist
-      if ("${subData['service_types']}"
-          .split(",")
-          .contains(widget.serviceData['ext_id'])) {
+      if ("${subData['service_types']}".split(",").contains(widget.serviceData['ext_id'])) {
         subscriptionPercent = kRound(subData["discount_percent"]);
         subscriptionMaxDiscount = kRound(subData["max_discount"]);
       }
-
-      // log("Subscription Percent: $subscriptionPercent");
-      // log("Subscription Max-Discount: $subscriptionMaxDiscount");
-
       calculateBreakdown();
     } catch (e) {
       log("$e");
@@ -478,23 +454,16 @@ class _Passenger_Transportation_UIState
 
   Future<void> validatePromoCode() async {
     try {
-      // re-init
       promoDiscount = 0;
-
       FocusScope.of(context).unfocus();
       isLoading.value = true;
-
-      // api call
       final res = await RideRepo.validatePromocode(
         widget.serviceData['service_id'],
         promoCode.text.trim(),
       );
       if (res['code'] != '200') throw res['message'] ?? 'Promo Code invalid!';
-
       KSnackbar(context, message: "Promo applied!");
       double nominal = parseToDouble(res['nominal']);
-
-      // if type is fix/parsen
       promoData = {
         "discount": (netPayable * (nominal / 100)),
         "code": promoCode.text,
@@ -504,7 +473,6 @@ class _Passenger_Transportation_UIState
         promoData = {"discount": kRound(nominal), "code": promoCode.text};
         promoDiscount = kRound(nominal);
       }
-
       calculateBreakdown();
     } catch (e) {
       KSnackbar(context, message: e, error: true);
@@ -516,84 +484,54 @@ class _Passenger_Transportation_UIState
   Future<void> calculateBreakdown() async {
     try {
       isLoading.value = true;
-
       final user = ref.read(userProvider);
       if (user == null) throw "User not logged in!";
-
-      // Convert distance to kilometers
       double distanceInKm = distanceInMeters / 1000.0;
-
-      // Get max distance from DB
       double maxDistance = parseToDouble(widget.serviceData["maks_distance"]);
-
       if (distanceInKm <= maxDistance) {
         distanceText = distanceInKm.toStringAsFixed(1);
-
-        // ✅ Always apply minimum fare for first 1 km
         double extraDistance = (distanceInKm - 1).clamp(0, double.infinity);
         double extraCost = costPerKm * extraDistance;
-
         price = kRound(minimumFare + extraCost);
-
-        // ✅ Subscription discount
         subscriptionDiscount = kRound(price * (subscriptionPercent / 100));
         if (subscriptionDiscount > subscriptionMaxDiscount) {
           subscriptionDiscount = subscriptionMaxDiscount;
         }
-
         int priceAfterSubscriptionDiscount = price - subscriptionDiscount;
-
-        // ✅ Promo discount only if promoData is set
         if (promoData.isNotEmpty) {
           if (promoDiscount > priceAfterSubscriptionDiscount) {
             promoDiscount = priceAfterSubscriptionDiscount;
           }
         } else {
-          promoDiscount = 0; // 🛑 No promo applied, reset it
+          promoDiscount = 0;
         }
-
-        // ✅ Calculate price after subscription and promo discounts
         int priceAfterSubAndPromo =
             price - subscriptionDiscount - promoDiscount;
-
-        // ✅ Service discount as percentage applied here
         serviceDiscountAmount = kRound(
           priceAfterSubAndPromo * (servicediscount / 100),
         );
-
-        // ✅ Calculate final payable with insurance
         int ins = insurance.round();
         netPayable =
             price -
-            subscriptionDiscount -
-            promoDiscount -
-            serviceDiscountAmount +
-            ins;
-
-        // ✅ Minimum payable check
+                subscriptionDiscount -
+                promoDiscount -
+                serviceDiscountAmount +
+                ins;
         if (netPayable < 1) {
           int diff = 1 - netPayable;
           serviceDiscountAmount -= diff;
           if (serviceDiscountAmount < 0) serviceDiscountAmount = 0;
           netPayable = 1;
         }
-
-        // ✅ Determine payment method
         paymentMethod = "Wallet";
         if (user.balance < netPayable) {
           paymentMethod = "Cash";
         }
-
-        setState(() {
-          // Optional: If you want to show serviceDiscountAmount in UI
-          // discountText =
-          //     "₹$subscriptionDiscount (Subscription) + ₹$promoDiscount (Promo) + ₹$serviceDiscountAmount (Service)";
-        });
+        setState(() {});
       } else {
         KSnackbar(
           context,
-          message:
-              "The distance of $distanceInKm Km is outside the allowed range of $maxDistance Km",
+          message: "The distance of $distanceInKm Km is outside the allowed range of $maxDistance Km",
           error: true,
         );
       }
@@ -656,11 +594,9 @@ class _Passenger_Transportation_UIState
           .doc(res['data'][0]['id'])
           .set(res['data'][0]);
 
-      // -----------120 seconds countdown starts
       searchCounter.value = 120;
       _searchTimer = Timer.periodic(const Duration(seconds: 1), (timer) async {
         if (searchCounter.value == 0) {
-          // ---------------after countdown ends
           timer.cancel();
           final status = await checkStatus(res['data'][0]['id']);
 
@@ -688,32 +624,30 @@ class _Passenger_Transportation_UIState
 
     showDialog(
       context: context,
-      builder:
-          (context) => AlertDialog(
-            title: Label("No Driver Found").title,
-            content:
-                Label(
-                  "Unfortunately, no driver accepted your ride request. Please try again or go back to home.",
-                ).regular,
-            actions: [
-              TextButton(
-                onPressed: () {
-                  Navigator.of(context).pop();
-                  context.go("/");
-                },
-                child: Label("Go to Home", color: StatusText.danger).regular,
-              ),
-              KButton(
-                onPressed: () {
-                  Navigator.of(context).pop();
-                  orderRide();
-                },
-                radius: 100,
-                padding: EdgeInsets.symmetric(horizontal: 15, vertical: 5),
-                label: "Try Again",
-              ),
-            ],
+      builder: (context) => AlertDialog(
+        title: Label("No Driver Found").title,
+        content: Label(
+          "Unfortunately, no driver accepted your ride request. Please try again or go back to home.",
+        ).regular,
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+              context.go("/");
+            },
+            child: Label("Go to Home", color: StatusText.danger).regular,
           ),
+          KButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+              orderRide();
+            },
+            radius: 100,
+            padding: EdgeInsets.symmetric(horizontal: 15, vertical: 5),
+            label: "Try Again",
+          ),
+        ],
+      ),
     );
   }
 
@@ -721,9 +655,7 @@ class _Passenger_Transportation_UIState
     try {
       isLoading.value = true;
       final data = {"transaction_id": transaction_id};
-
       final res = await RideRepo.checkOrderRequest(data);
-
       return int.parse("${res['data'][0]['status']}");
     } catch (e) {
       rethrow;
@@ -743,7 +675,6 @@ class _Passenger_Transportation_UIState
       );
 
       KSnackbar(context, message: "Bid Accepted!");
-
       final status = await checkStatus(transactionId!);
 
       if (status > 1) {
@@ -769,7 +700,6 @@ class _Passenger_Transportation_UIState
   @override
   Widget build(BuildContext context) {
     double screenHeight = MediaQuery.of(context).size.height;
-
     return KScaffold(
       isLoading: isLoading,
       body: SafeArea(
@@ -812,12 +742,8 @@ class _Passenger_Transportation_UIState
                           ),
                         );
                       }
-                      pointManager =
-                          await mapController!.annotations
-                              .createPointAnnotationManager();
-                      polylineManager =
-                          await mapController!.annotations
-                              .createPolylineAnnotationManager();
+                      pointManager = await mapController!.annotations.createPointAnnotationManager();
+                      polylineManager = await mapController!.annotations.createPolylineAnnotationManager();
                       setState(() {});
                       if (myPos != null) {
                         await setCameraToCoordinates(
@@ -847,50 +773,50 @@ class _Passenger_Transportation_UIState
                               child:
                                   pickupAddressData == null
                                       ? KButton(
-                                        onPressed: () async {
-                                          if (center != null) {
-                                            setState(() {
-                                              pickupCoordinates = center;
-                                            });
-                                            await getAddress("Pickup", center);
-                                          }
-                                        },
-                                        label: "Pick Location",
-                                        fontSize: 12,
-                                        visualDensity: VisualDensity.compact,
-                                        radius: 100,
-                                        padding: EdgeInsets.symmetric(
-                                          horizontal: 12,
-                                          vertical: 2,
-                                        ),
-                                      )
+                                          onPressed: () async {
+                                            if (center != null) {
+                                              setState(() {
+                                                pickupCoordinates = center;
+                                              });
+                                              await getAddress("Pickup", center);
+                                            }
+                                          },
+                                          label: "Pick Location",
+                                          fontSize: 12,
+                                          visualDensity: VisualDensity.compact,
+                                          radius: 100,
+                                          padding: EdgeInsets.symmetric(
+                                            horizontal: 12,
+                                            vertical: 2,
+                                          ),
+                                        )
                                       : KButton(
-                                        onPressed: () async {
-                                          if (center != null) {
-                                            setState(() {
-                                              dropCoordinates = center;
-                                            });
-                                            await getAddress("Drop", center);
-                                            mapController!.easeTo(
-                                              await MapboxRepo.cameraOptionsForBounds(
-                                                mapController: mapController!,
-                                                pickup: pickupCoordinates!,
-                                                drop: dropCoordinates!,
-                                              ),
-                                              MapAnimationOptions(),
-                                            );
-                                          }
-                                        },
-                                        label: "Drop Location",
-                                        fontSize: 12,
-                                        visualDensity: VisualDensity.compact,
-                                        radius: 100,
-                                        backgroundColor: StatusText.danger,
-                                        padding: EdgeInsets.symmetric(
-                                          horizontal: 12,
-                                          vertical: 2,
+                                          onPressed: () async {
+                                            if (center != null) {
+                                              setState(() {
+                                                dropCoordinates = center;
+                                              });
+                                              await getAddress("Drop", center);
+                                              mapController!.easeTo(
+                                                await MapboxRepo.cameraOptionsForBounds(
+                                                  mapController: mapController!,
+                                                  pickup: pickupCoordinates!,
+                                                  drop: dropCoordinates!,
+                                                ),
+                                                MapAnimationOptions(),
+                                              );
+                                            }
+                                          },
+                                          label: "Drop Location",
+                                          fontSize: 12,
+                                          visualDensity: VisualDensity.compact,
+                                          radius: 100,
+                                          backgroundColor: StatusText.danger,
+                                          padding: EdgeInsets.symmetric(
+                                            horizontal: 12,
+                                            vertical: 2,
+                                          ),
                                         ),
-                                      ),
                             ),
                             Align(
                               alignment: Alignment.bottomCenter,
@@ -912,177 +838,168 @@ class _Passenger_Transportation_UIState
               ],
             ),
             headerActions(),
-
             DraggableScrollableSheet(
               controller: _sheetController,
               initialChildSize: 0.5,
               minChildSize: 0.3,
               maxChildSize: currentState == CurrentState.Picking ? 0.6 : 0.9,
-              builder:
-                  (context, scrollController) => Container(
-                    decoration: BoxDecoration(
-                      color: Kolor.scaffold,
-                      borderRadius: BorderRadius.vertical(
-                        top: Radius.circular(20),
+              builder: (context, scrollController) => Container(
+                decoration: BoxDecoration(
+                  color: Kolor.scaffold,
+                  borderRadius: BorderRadius.vertical(
+                    top: Radius.circular(20),
+                  ),
+                ),
+                child: Column(
+                  children: [
+                    Expanded(
+                      child: SingleChildScrollView(
+                        controller: scrollController,
+                        child: Column(
+                          children: [
+                            Padding(
+                              padding: const EdgeInsets.all(
+                                kPadding,
+                              ).copyWith(bottom: 0),
+                              child: Column(
+                                children: [
+                                  Center(
+                                    child: KCard(
+                                      color: Kolor.border,
+                                      width: 60,
+                                      height: 7,
+                                      radius: 100,
+                                    ),
+                                  ),
+                                  height20,
+                                  KCard(
+                                    padding: EdgeInsets.all(10),
+                                    child: Row(
+                                      spacing: 15,
+                                      children: [
+                                        KCard(
+                                          color: Kolor.scaffold,
+                                          padding: EdgeInsets.all(5),
+                                          child: Image.network(
+                                            widget.serviceImage,
+                                            height: 50,
+                                          ),
+                                        ),
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              Label(
+                                                widget.serviceName,
+                                                fontSize: 17,
+                                              ).regular,
+                                              Label(
+                                                widget.serviceData['description'] ??
+                                                    "Ride Service",
+                                                fontSize: 11,
+                                              ).subtitle,
+                                            ],
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            sheetBody(),
+                          ],
+                        ),
                       ),
                     ),
-                    child: Column(
-                      children: [
-                        Expanded(
-                          child: SingleChildScrollView(
-                            controller: scrollController,
-                            child: Column(
-                              children: [
-                                Padding(
-                                  padding: const EdgeInsets.all(
-                                    kPadding,
-                                  ).copyWith(bottom: 0),
-                                  child: Column(
-                                    children: [
-                                      Center(
-                                        child: KCard(
-                                          color: Kolor.border,
-                                          width: 60,
-                                          height: 7,
-                                          radius: 100,
-                                        ),
-                                      ),
-                                      height20,
-                                      KCard(
-                                        padding: EdgeInsets.all(10),
-                                        child: Row(
-                                          spacing: 15,
-                                          children: [
-                                            KCard(
-                                              color: Kolor.scaffold,
-                                              padding: EdgeInsets.all(5),
-                                              child: Image.network(
-                                                widget.serviceImage,
-                                                height: 50,
-                                              ),
-                                            ),
-                                            Expanded(
-                                              child: Column(
-                                                crossAxisAlignment:
-                                                    CrossAxisAlignment.start,
-                                                children: [
-                                                  Label(
-                                                    widget.serviceName,
-                                                    fontSize: 17,
-                                                  ).regular,
-                                                  Label(
-                                                    widget.serviceData['description'] ??
-                                                        "Ride Service",
-                                                    fontSize: 11,
-                                                  ).subtitle,
-                                                ],
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                sheetBody(),
-                              ],
-                            ),
-                          ),
-                        ),
-                        if (currentState != CurrentState.Searching)
-                          Padding(
-                            padding: EdgeInsets.all(kPadding).copyWith(top: 0),
-                            child:
-                                currentState == CurrentState.Picking
-                                    ? KButton(
-                                      onPressed:
-                                          pickupAddressData != null &&
-                                                  dropAddressData != null
-                                              ? () {
-                                                if (driversList.isEmpty) {
-                                                  KSnackbar(
-                                                    context,
-                                                    message:
-                                                        "Driver not available!",
-                                                    error: true,
-                                                  );
-                                                  return;
-                                                }
-                                                distanceInMeters = distance;
-                                                calculateBreakdown();
-
-                                                setState(() {
-                                                  currentState =
-                                                      CurrentState.Checkout;
-                                                  _sheetController.animateTo(
-                                                    .7,
-                                                    duration: Duration(
-                                                      milliseconds: 200,
-                                                    ),
-                                                    curve: Curves.easeIn,
-                                                  );
-                                                });
-                                              }
-                                              : null,
-                                      style: KButtonStyle.expanded,
-                                      backgroundColor: Kolor.secondary,
-                                      label: "Confirm Location",
-                                    )
-                                    : currentState == CurrentState.Checkout
-                                    ? KButton(
-                                      onPressed: orderRide,
-                                      style: KButtonStyle.expanded,
-                                      label: "Place Order",
-                                    )
-                                    : KButton(
-                                      onPressed: null,
-                                      style: KButtonStyle.expanded,
-                                      backgroundColor: StatusText.danger,
-                                      label: "Cancel Order",
-                                    ),
-                          )
-                        else
-                          KCard(
-                            margin: EdgeInsets.all(10),
-                            padding: EdgeInsets.all(10),
-                            color: Kolor.card,
-                            child: Column(
-                              spacing: 15,
-                              children: [
-                                Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Label("Bid Ends in", fontSize: 17).title,
-                                    ValueListenableBuilder(
-                                      valueListenable: searchCounter,
-                                      builder:
-                                          (context, value, child) =>
-                                              Label(
-                                                formatDuration(value),
-                                                fontSize: 17,
-                                              ).title,
-                                    ),
-                                  ],
-                                ),
-                                KButton(
-                                  onPressed:
-                                      transactionId != null
-                                          ? () async {
-                                            _searchCancel();
+                    if (currentState != CurrentState.Searching)
+                      Padding(
+                        padding: EdgeInsets.all(kPadding).copyWith(top: 0),
+                        child: currentState == CurrentState.Picking
+                            ? KButton(
+                                onPressed:
+                                    pickupAddressData != null && dropAddressData != null
+                                        ? () {
+                                            if (driversList.isEmpty) {
+                                              KSnackbar(
+                                                context,
+                                                message: "Driver not available!",
+                                                error: true,
+                                              );
+                                              return;
+                                            }
+                                            distanceInMeters = distance;
+                                            calculateBreakdown();
+                                            setState(() {
+                                              currentState =
+                                                  CurrentState.Checkout;
+                                              _sheetController.animateTo(
+                                                .7,
+                                                duration: Duration(
+                                                  milliseconds: 200,
+                                                ),
+                                                curve: Curves.easeIn,
+                                              );
+                                            });
                                           }
-                                          : null,
-                                  label: "Cancel Bid",
-                                  backgroundColor: StatusText.danger,
-                                  style: KButtonStyle.expanded,
-                                  radius: 10,
+                                        : null,
+                                style: KButtonStyle.expanded,
+                                backgroundColor: Kolor.secondary,
+                                label: "Confirm Location",
+                              )
+                            : currentState == CurrentState.Checkout
+                                ? KButton(
+                                    onPressed: orderRide,
+                                    style: KButtonStyle.expanded,
+                                    label: "Place Order",
+                                  )
+                                : KButton(
+                                    onPressed: null,
+                                    style: KButtonStyle.expanded,
+                                    backgroundColor: StatusText.danger,
+                                    label: "Cancel Order",
+                                  ),
+                      )
+                    else
+                      KCard(
+                        margin: EdgeInsets.all(10),
+                        padding: EdgeInsets.all(10),
+                        color: Kolor.card,
+                        child: Column(
+                          spacing: 15,
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Label("Bid Ends in", fontSize: 17).title,
+                                ValueListenableBuilder(
+                                  valueListenable: searchCounter,
+                                  builder: (context, value, child) =>
+                                      Label(
+                                        formatDuration(value),
+                                        fontSize: 17,
+                                      ).title,
                                 ),
                               ],
                             ),
-                          ),
-                      ],
-                    ),
-                  ),
+                            KButton(
+                              onPressed: transactionId != null
+                                  ? () async {
+                                      _searchCancel();
+                                    }
+                                  : null,
+                              label: "Cancel Bid",
+                              backgroundColor: StatusText.danger,
+                              style: KButtonStyle.expanded,
+                              radius: 10,
+                            ),
+                          ],
+                        ),
+                      ),
+                  ],
+                ),
+              ),
             ),
           ],
         ),
@@ -1101,24 +1018,29 @@ class _Passenger_Transportation_UIState
               icon: const Icon(Icons.arrow_back),
             ),
             const SizedBox(width: 10),
-            // Search bar (make it slightly less wide)
             Expanded(
               child: InkWell(
                 onTap: () async {
                   if (pickupCoordinates == null) {
+                    isLoading.value = true;
                     final myPos = await LocationService.getCurrentLocation();
                     if (myPos != null) {
+                      final addressData = await MapboxRepo.getAddressFromCoordinates(
+                        Position(myPos.longitude, myPos.latitude),
+                      );
                       setState(() {
                         pickupCoordinates = Position(
                           myPos.longitude,
                           myPos.latitude,
                         );
-                        pickupAddressData = {"address": "Current Location"};
+                        // Use the actual address from reverse geocoding
+                        pickupAddressData = addressData;
                         if (pickupPoint != null) {
                           pointManager.delete(pickupPoint!);
                         }
                       });
                     }
+                    isLoading.value = false;
                   }
                   _searchAndSetLocation("Drop");
                 },
@@ -1135,15 +1057,14 @@ class _Passenger_Transportation_UIState
                       const Icon(Icons.search, color: Colors.grey),
                       const SizedBox(width: 10),
                       Expanded(
-                        child:
-                            Label(
-                              dropAddressData == null
-                                  ? "Search Drop Location"
-                                  : dropAddressData!["address"],
-                              fontSize: 14,
-                              weight: 500,
-                              color: Colors.black,
-                            ).regular,
+                        child: Label(
+                          dropAddressData == null
+                              ? "Search Drop Location"
+                              : dropAddressData!["address"],
+                          fontSize: 14,
+                          weight: 500,
+                          color: Colors.black,
+                        ).regular,
                       ),
                     ],
                   ),
@@ -1151,7 +1072,6 @@ class _Passenger_Transportation_UIState
               ),
             ),
             const SizedBox(width: 10),
-            // Zoom to location icon
             IconButton(
               onPressed: () async {
                 if (pickupCoordinates != null && dropCoordinates != null) {
@@ -1163,8 +1083,7 @@ class _Passenger_Transportation_UIState
                     ),
                     MapAnimationOptions(),
                   );
-                } else if (pickupCoordinates != null &&
-                    dropCoordinates == null) {
+                } else if (pickupCoordinates != null && dropCoordinates == null) {
                   setCameraToCoordinates(
                     bounds: Position(
                       pickupCoordinates!.lng,
@@ -1205,34 +1124,34 @@ class _Passenger_Transportation_UIState
                     polylineManager.deleteAll();
                   });
                 },
-                child:
-                    Label(
-                      "Clear",
-                      weight: 900,
-                      color: kColor(context).primary,
-                    ).regular,
+                child: Label(
+                  "Clear",
+                  weight: 900,
+                  color: kColor(context).primary,
+                ).regular,
               ),
             ],
           ),
           TextButton.icon(
             onPressed: () async {
+              isLoading.value = true;
               myPos = await LocationService.getCurrentLocation();
-              if (myPos == null) return;
-
+              if (myPos == null) {
+                isLoading.value = false;
+                return;
+              }
+              final addressData = await MapboxRepo.getAddressFromCoordinates(
+                Position(myPos!.longitude, myPos!.latitude),
+              );
               setState(() {
                 pickupCoordinates = Position(myPos!.longitude, myPos!.latitude);
-                pickupAddressData = {
-                  "address": "Current Location", // optional placeholder
-                };
-
-                // (optional) reset or create pickupPoint marker if needed
+                pickupAddressData = addressData;
                 if (pickupPoint != null) {
                   pointManager.delete(pickupPoint!);
                 }
-
-                // optionally center camera
                 setCameraToCoordinates(bounds: pickupCoordinates!);
               });
+              isLoading.value = false;
             },
             icon: Icon(Icons.my_location),
             label: Text("Use Current Location as Pickup"),
@@ -1267,12 +1186,11 @@ class _Passenger_Transportation_UIState
           children: [
             if (transactionId != null)
               StreamBuilder(
-                stream:
-                    FirebaseFirestore.instance
-                        .collection("ride_bids")
-                        .doc(transactionId!)
-                        .collection("bids")
-                        .snapshots(),
+                stream: FirebaseFirestore.instance
+                    .collection("ride_bids")
+                    .doc(transactionId!)
+                    .collection("bids")
+                    .snapshots(),
                 builder: (context, snapshot) {
                   if (snapshot.hasError) {
                     return kNoData();
@@ -1284,7 +1202,6 @@ class _Passenger_Transportation_UIState
                             'Please wait for riders to bids for this ride.',
                       );
                     }
-
                     return Column(
                       spacing: 15,
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1293,15 +1210,13 @@ class _Passenger_Transportation_UIState
                           spacing: 10,
                           children: [
                             Label("Available Bids", weight: 900).title,
-
                             CircleAvatar(
                               radius: 12,
-                              child:
-                                  Label(
-                                    "${snapshot.data!.docs.length}",
-                                    weight: 900,
-                                    fontSize: 12,
-                                  ).regular,
+                              child: Label(
+                                "${snapshot.data!.docs.length}",
+                                weight: 900,
+                                fontSize: 12,
+                              ).regular,
                             ),
                           ],
                         ),
@@ -1312,15 +1227,13 @@ class _Passenger_Transportation_UIState
                           itemCount: snapshot.data!.docs.length,
                           itemBuilder: (context, index) {
                             final bid = snapshot.data!.docs[index].data();
-
                             return KCard(
                               child: Row(
                                 spacing: 15,
                                 children: [
                                   Expanded(
                                     child: Row(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
+                                      crossAxisAlignment: CrossAxisAlignment.start,
                                       children: [
                                         Label(
                                           kCurrencyFormat(bid["amount"]),
@@ -1334,8 +1247,7 @@ class _Passenger_Transportation_UIState
                                   ),
                                   Expanded(
                                     child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.end,
+                                      crossAxisAlignment: CrossAxisAlignment.end,
                                       children: [
                                         Label(
                                           bid["name"],
@@ -1343,24 +1255,21 @@ class _Passenger_Transportation_UIState
                                           fontSize: 16,
                                         ).regular,
                                         Row(
-                                          mainAxisAlignment:
-                                              MainAxisAlignment.end,
+                                          mainAxisAlignment: MainAxisAlignment.end,
                                           spacing: 2,
                                           children: List.generate(
                                             kRound(bid['rating']),
-                                            (index) =>
-                                                Icon(Icons.star, size: 10),
+                                            (index) => Icon(Icons.star, size: 10),
                                           ),
                                         ),
                                       ],
                                     ),
                                   ),
                                   KButton(
-                                    onPressed:
-                                        () => acceptBid(
-                                          bid['driver_id'],
-                                          parseToDouble(bid['amount']),
-                                        ),
+                                    onPressed: () => acceptBid(
+                                      bid['driver_id'],
+                                      parseToDouble(bid['amount']),
+                                    ),
                                     padding: EdgeInsets.symmetric(
                                       horizontal: 10,
                                       vertical: 2,
@@ -1378,7 +1287,6 @@ class _Passenger_Transportation_UIState
                       ],
                     );
                   }
-
                   return kSmallLoading;
                 },
               ),
@@ -1393,19 +1301,23 @@ class _Passenger_Transportation_UIState
     return KCard(
       onTap: () async {
         if (type == "Drop" && pickupCoordinates == null) {
+          isLoading.value = true;
           final myPos = await LocationService.getCurrentLocation();
           if (myPos != null) {
+            final addressData = await MapboxRepo.getAddressFromCoordinates(
+              Position(myPos.longitude, myPos.latitude),
+            );
             setState(() {
               pickupCoordinates = Position(myPos.longitude, myPos.latitude);
-              pickupAddressData = {"address": "Current Location"};
+              pickupAddressData = addressData;
               if (pickupPoint != null) {
                 pointManager.delete(pickupPoint!);
               }
             });
           }
+          isLoading.value = false;
         }
-
-        _searchAndSetLocation(type); // Now open the search
+        _searchAndSetLocation(type);
       },
       borderWidth: 1,
       color: Kolor.scaffold,
@@ -1421,51 +1333,49 @@ class _Passenger_Transportation_UIState
             Expanded(
               child: Skeletonizer(
                 enabled: isFetching,
-                child:
-                    pickupCoordinates == null || pickupAddressData == null
-                        ? Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Label("Choose Pickup Location", fontSize: 15).title,
-                            Label("Tap to pick location from list").subtitle,
-                          ],
-                        )
-                        : Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Label(
-                              pickupAddressData!["address"],
-                              fontSize: 15,
-                            ).title,
-                            Label(
-                              "${pickupCoordinates!.lat}, ${pickupCoordinates!.lng}",
-                            ).subtitle,
-                          ],
-                        ),
+                child: pickupCoordinates == null || pickupAddressData == null
+                    ? Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Label("Choose Pickup Location", fontSize: 15).title,
+                          Label("Tap to pick location from list").subtitle,
+                        ],
+                      )
+                    : Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Label(
+                            pickupAddressData!["address"],
+                            fontSize: 15,
+                          ).title,
+                          Label(
+                            "${pickupCoordinates!.lat}, ${pickupCoordinates!.lng}",
+                          ).subtitle,
+                        ],
+                      ),
               ),
             )
           else
             Expanded(
               child: Skeletonizer(
                 enabled: isFetching,
-                child:
-                    dropCoordinates == null || dropAddressData == null
-                        ? Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Label("Choose Drop Location", fontSize: 15).title,
-                            Label("Tap to pick location from list").subtitle,
-                          ],
-                        )
-                        : Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Label(
-                              dropAddressData!["address"],
-                              fontSize: 15,
-                            ).title,
-                          ],
-                        ),
+                child: dropCoordinates == null || dropAddressData == null
+                    ? Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Label("Choose Drop Location", fontSize: 15).title,
+                          Label("Tap to pick location from list").subtitle,
+                        ],
+                      )
+                    : Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Label(
+                            dropAddressData!["address"],
+                            fontSize: 15,
+                          ).title,
+                        ],
+                      ),
               ),
             ),
         ],
@@ -1530,7 +1440,7 @@ class _Passenger_Transportation_UIState
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Label("Distance (Km)").regular,
-                  Label("$distanceText Km").regular, // Use calculated distance
+                  Label("$distanceText Km").regular,
                 ],
               ),
               height5,
@@ -1538,7 +1448,7 @@ class _Passenger_Transportation_UIState
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Label("Price (NPR)").regular,
-                  Label(kCurrencyFormat(price)).regular, // Use calculated price
+                  Label(kCurrencyFormat(price)).regular,
                 ],
               ),
               height5,
@@ -1586,7 +1496,6 @@ class _Passenger_Transportation_UIState
                 ],
               ),
               height5,
-              // ✅ NEW: Insurance Section
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -1594,7 +1503,6 @@ class _Passenger_Transportation_UIState
                   Label(kCurrencyFormat(insurance)).regular,
                 ],
               ),
-
               div,
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -1615,15 +1523,13 @@ class _Passenger_Transportation_UIState
                   controller: promoCode,
                   hintText: "Have a promo code?",
                   textCapitalization: TextCapitalization.characters,
-
                   suffix: TextButton(
                     onPressed: validatePromoCode,
-                    child:
-                        Label(
-                          "Use Promo",
-                          color: StatusText.neutral,
-                          weight: 900,
-                        ).regular,
+                    child: Label(
+                      "Use Promo",
+                      color: StatusText.neutral,
+                      weight: 900,
+                    ).regular,
                   ),
                 )
               else
@@ -1684,15 +1590,10 @@ class _Passenger_Transportation_UIState
                   children: [
                     CircleAvatar(
                       backgroundColor:
-                          paymentMethod == "Wallet"
-                              ? Kolor.secondary
-                              : Kolor.card,
+                          paymentMethod == "Wallet" ? Kolor.secondary : Kolor.card,
                       child: Icon(
                         Icons.check,
-                        color:
-                            paymentMethod == "Wallet"
-                                ? Colors.white
-                                : Colors.transparent,
+                        color: paymentMethod == "Wallet" ? Colors.white : Colors.transparent,
                         size: 20,
                       ),
                     ),
@@ -1711,13 +1612,12 @@ class _Passenger_Transportation_UIState
                                   horizontal: 5,
                                 ),
                                 color: Kolor.secondary,
-                                child:
-                                    Label(
-                                      kCurrencyFormat(user.balance),
-                                      weight: 800,
-                                      fontSize: 10,
-                                      color: Colors.white,
-                                    ).regular,
+                                child: Label(
+                                  kCurrencyFormat(user.balance),
+                                  weight: 800,
+                                  fontSize: 10,
+                                  color: Colors.white,
+                                ).regular,
                               ),
                             ],
                           ),
@@ -1744,15 +1644,10 @@ class _Passenger_Transportation_UIState
                   children: [
                     CircleAvatar(
                       backgroundColor:
-                          paymentMethod == "Cash"
-                              ? Kolor.secondary
-                              : Kolor.card,
+                          paymentMethod == "Cash" ? Kolor.secondary : Kolor.card,
                       child: Icon(
                         Icons.check,
-                        color:
-                            paymentMethod == "Cash"
-                                ? Colors.white
-                                : Colors.transparent,
+                        color: paymentMethod == "Cash" ? Colors.white : Colors.transparent,
                         size: 20,
                       ),
                     ),

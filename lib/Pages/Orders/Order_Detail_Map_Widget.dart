@@ -1,6 +1,6 @@
 import 'dart:async';
-import 'package:flutter/foundation.dart'; // <-- ADD THIS IMPORT
-import 'package:flutter/gestures.dart'; // <-- AND THIS ONE
+import 'package:flutter/foundation.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hello_captain_user/Repository/home_repo.dart';
@@ -16,12 +16,15 @@ class Order_Detail_Map_Widget extends ConsumerStatefulWidget {
   final Position endPosition;
   final String serviceId;
   final String driverId;
+  final bool isFullscreen; // Added flag for fullscreen mode
+
   const Order_Detail_Map_Widget({
     super.key,
     required this.startPosition,
     required this.endPosition,
     required this.serviceId,
     required this.driverId,
+    this.isFullscreen = false, // Default to false
   });
 
   @override
@@ -29,8 +32,7 @@ class Order_Detail_Map_Widget extends ConsumerStatefulWidget {
       _Order_Detail_Map_WidgetState();
 }
 
-class _Order_Detail_Map_WidgetState
-    extends ConsumerState<Order_Detail_Map_Widget> {
+class _Order_Detail_Map_WidgetState extends ConsumerState<Order_Detail_Map_Widget> {
   MapboxMap? mapController;
   PointAnnotationManager? pointManager;
   PolylineAnnotationManager? polylineManager;
@@ -44,16 +46,14 @@ class _Order_Detail_Map_WidgetState
   @override
   void initState() {
     super.initState();
-    // Start the periodic timer to refresh the driver's location every 15 seconds
+    // Start the periodic timer to refresh the driver's location
     _refreshTimer = Timer.periodic(const Duration(seconds: 3), (timer) {
       fetchAndUpdateDriverLocation();
-      // print("✅ Driver location refreshed by Timer at ${DateTime.now()}");
     });
   }
 
   @override
   void dispose() {
-    // Cancel the timer when the widget is disposed to prevent memory leaks
     _refreshTimer?.cancel();
     pointManager?.deleteAll();
     polylineManager?.deleteAll();
@@ -61,6 +61,7 @@ class _Order_Detail_Map_WidgetState
   }
 
   Future<void> setMarkerPoint(String type, Position pos) async {
+    // ... (rest of the setMarkerPoint method remains the same)
     try {
       isLoading.value = true;
       Uint8List imageData;
@@ -137,6 +138,7 @@ class _Order_Detail_Map_WidgetState
   }
 
   Future<void> setPolyline() async {
+    // ... (rest of the setPolyline method remains the same)
     try {
       isLoading.value = true;
       final res = await MapboxRepo().getDirections(
@@ -166,6 +168,7 @@ class _Order_Detail_Map_WidgetState
   }
 
   Future<void> _fitCameraToBounds() async {
+    // ... (rest of the _fitCameraToBounds method remains the same)
     if (mapController == null) return;
     await mapController!.easeTo(
       await MapboxRepo.cameraOptionsForBounds(
@@ -177,22 +180,21 @@ class _Order_Detail_Map_WidgetState
     );
   }
 
-  Position? _currentDriverPos; // store last known position
+  Position? _currentDriverPos;
 
   Future<void> _animateDriverMovement(Position from, Position to) async {
-    const int steps = 30; // higher = smoother
-    const Duration totalDuration = Duration(seconds: 2); // longer animation
+    // ... (rest of the _animateDriverMovement method remains the same)
+    const int steps = 30;
+    const Duration totalDuration = Duration(seconds: 2);
     final stepDuration = totalDuration ~/ steps;
 
     for (int i = 1; i <= steps; i++) {
       if (!mounted) return;
-      // Linear interpolation for smooth movement
       final double lng = from.lng + (to.lng - from.lng) * (i / steps);
       final double lat = from.lat + (to.lat - from.lat) * (i / steps);
 
       if (driverMarker != null && pointManager != null) {
         driverMarker!.geometry = Point(coordinates: Position(lng, lat));
-        // Update the marker's position on the map
         await pointManager!.update(driverMarker!);
       }
       await Future.delayed(stepDuration);
@@ -200,6 +202,7 @@ class _Order_Detail_Map_WidgetState
   }
 
   Future<void> fetchAndUpdateDriverLocation() async {
+    // ... (rest of the fetchAndUpdateDriverLocation method remains the same)
     try {
       print("Reloading location for driver ID: ${widget.driverId}");
       final res = await RideRepo.locateDriver(driverId: widget.driverId);
@@ -211,13 +214,11 @@ class _Order_Detail_Map_WidgetState
         );
 
         if (_currentDriverPos == null) {
-          // First time, just place the marker without animation
           await setMarkerPoint("Driver", newDriverPos);
         } else {
-          // Animate from the last known position to the new one
           await _animateDriverMovement(_currentDriverPos!, newDriverPos);
         }
-        _currentDriverPos = newDriverPos; // Update the current position
+        _currentDriverPos = newDriverPos;
       }
     } catch (e) {
       if (mounted) {
@@ -230,11 +231,25 @@ class _Order_Detail_Map_WidgetState
     }
   }
 
+  void _navigateToFullscreenMap() {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => FullscreenMap(
+          startPosition: widget.startPosition,
+          endPosition: widget.endPosition,
+          serviceId: widget.serviceId,
+          driverId: widget.driverId,
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      width: double.infinity,
-      height: 400,
+      // Use full screen dimensions when in fullscreen mode
+      width: widget.isFullscreen ? double.infinity : double.infinity,
+      height: widget.isFullscreen ? double.infinity : 400,
       child: Stack(
         children: [
           ClipRRect(
@@ -249,8 +264,6 @@ class _Order_Detail_Map_WidgetState
               ),
               onMapCreated: (controller) async {
                 mapController = controller;
-
-                // Update gesture settings on the controller
                 await mapController!.gestures.updateSettings(
                   GesturesSettings(
                     scrollEnabled: true,
@@ -258,18 +271,13 @@ class _Order_Detail_Map_WidgetState
                     rotateEnabled: true,
                   ),
                 );
-
                 await mapController!.scaleBar.updateSettings(
                   ScaleBarSettings(enabled: false),
                 );
-
                 pointManager =
-                    await mapController!.annotations
-                        .createPointAnnotationManager();
+                    await mapController!.annotations.createPointAnnotationManager();
                 polylineManager =
-                    await mapController!.annotations
-                        .createPolylineAnnotationManager();
-
+                    await mapController!.annotations.createPolylineAnnotationManager();
                 setMarkerPoint("Pickup", widget.startPosition);
                 setMarkerPoint("Drop", widget.endPosition);
                 setPolyline();
@@ -281,15 +289,61 @@ class _Order_Detail_Map_WidgetState
           Positioned(
             top: 10,
             right: 10,
-            child: FloatingActionButton(
-              mini: true,
-              heroTag: 'recenter',
-              onPressed: _fitCameraToBounds,
-              tooltip: 'Recenter Map',
-              child: const Icon(Icons.my_location),
+            child: Column(
+              children: [
+                FloatingActionButton(
+                  mini: true,
+                  heroTag: 'recenter',
+                  onPressed: _fitCameraToBounds,
+                  tooltip: 'Recenter Map',
+                  child: const Icon(Icons.my_location),
+                ),
+                const SizedBox(height: 8),
+                // Only show fullscreen button when not in fullscreen mode
+                if (!widget.isFullscreen)
+                  FloatingActionButton(
+                    mini: true,
+                    heroTag: 'fullscreen',
+                    onPressed: _navigateToFullscreenMap,
+                    tooltip: 'Fullscreen Map',
+                    child: const Icon(Icons.fullscreen),
+                  ),
+              ],
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class FullscreenMap extends StatelessWidget {
+  final Position startPosition;
+  final Position endPosition;
+  final String serviceId;
+  final String driverId;
+
+  const FullscreenMap({
+    super.key,
+    required this.startPosition,
+    required this.endPosition,
+    required this.serviceId,
+    required this.driverId,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Map'),
+        backgroundColor: Colors.transparent,
+      ),
+      body: Order_Detail_Map_Widget(
+        startPosition: startPosition,
+        endPosition: endPosition,
+        serviceId: serviceId,
+        driverId: driverId,
+        isFullscreen: true, // Pass true to indicate fullscreen mode
       ),
     );
   }

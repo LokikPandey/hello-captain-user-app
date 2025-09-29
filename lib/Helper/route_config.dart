@@ -13,6 +13,7 @@ import 'package:hello_captain_user/Pages/Profile/Khalti_UI.dart';
 import 'package:hello_captain_user/Pages/Profile/Subscription_Pass_UI.dart';
 import 'package:hello_captain_user/Pages/Profile/Transaction_History_UI.dart';
 import 'package:hello_captain_user/Pages/Service/Confirmation_UI.dart';
+import 'package:hello_captain_user/Pages/Service/Confirmation_UI2.dart';
 import 'package:hello_captain_user/Pages/Service/Locate_Driver_UI.dart';
 import 'package:hello_captain_user/Pages/Service/Merchant/Merchant_Checkout_UI.dart';
 import 'package:hello_captain_user/Pages/Service/Merchant/Merchant_Detail_UI.dart';
@@ -310,6 +311,16 @@ final routeProvider = Provider<GoRouter>((ref) {
             description: extra['description'],
             transactionId: extra['transactionId'],
             driverId: extra['driverId'],
+          );
+        },
+      ),
+            GoRoute(
+        path: "/confirmation2",
+        builder: (context, state) {
+          final extra = state.extra as Map<String, dynamic>;
+          return Confirmation_UI2(
+            subtitle: extra['subtitle'],
+            description: extra['description'],
           );
         },
       ),

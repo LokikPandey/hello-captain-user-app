@@ -39,6 +39,7 @@ class Merchant_Checkout_UI extends ConsumerStatefulWidget {
   ConsumerState<Merchant_Checkout_UI> createState() =>
       _Merchant_Checkout_UIState();
 }
+// Paste this entire class to replace your existing _Merchant_Checkout_UIState
 
 class _Merchant_Checkout_UIState extends ConsumerState<Merchant_Checkout_UI> {
   final isLoading = ValueNotifier(false);
@@ -92,9 +93,7 @@ class _Merchant_Checkout_UIState extends ConsumerState<Merchant_Checkout_UI> {
         ).future,
       );
       driversList =
-          (driverRes['data'] as List)
-              .map((e) => DriverModel.fromMap(e))
-              .toList();
+          (driverRes['data'] as List).map((e) => DriverModel.fromMap(e)).toList();
 
       // log("$driversList");
     } catch (e) {
@@ -183,7 +182,7 @@ class _Merchant_Checkout_UIState extends ConsumerState<Merchant_Checkout_UI> {
         for (var item in cartData) {
           double item_cost =
               (item.promo_price <= 0 ? item.item_price : item.promo_price) /
-              100;
+                  100;
           price += kRound(item.quantity * item_cost);
         }
         // log("Price: $price");
@@ -254,10 +253,26 @@ class _Merchant_Checkout_UIState extends ConsumerState<Merchant_Checkout_UI> {
       final myPos = await LocationService.getCurrentLocation();
       if (myPos == null) throw "Unable to determine location!";
 
+      // START: VALIDATION BLOCK
+      if (merchant.merchant_latitude == null) {
+        throw "Error: Merchant latitude is missing.";
+      }
+      if (merchant.merchant_longitude == null) {
+        throw "Error: Merchant longitude is missing.";
+      }
+      if (merchant.merchant_address == null) {
+        throw "Error: Merchant address is missing.";
+      }
+      if (merchant.merchant_id == null) {
+        throw "Error: Merchant ID is missing.";
+      }
+      if (displayAddress.isEmpty) {
+        throw "Error: User's delivery address is missing.";
+      }
+      // END: VALIDATION BLOCK
+
       final cartList = ref.read(cartProvider);
-
       List pesanan = [];
-
       for (var element in cartList) {
         pesanan.add({
           "note": "",
@@ -282,27 +297,27 @@ class _Merchant_Checkout_UIState extends ConsumerState<Merchant_Checkout_UI> {
         "end_latitude": myPos.latitude,
         "end_longitude": myPos.longitude,
         "distance": parseToDouble(distance) * 1000,
-        "price": price,
+        "price": netPayable,
         "estimasi": estimatedTime,
         "pickup_address": merchant.merchant_address,
         "destination_address": displayAddress,
         "promo_discount": subscriptionDiscount + promoDiscount,
         "wallet_payment": paymentMethod == "Cash" ? "0" : "1",
-        "total_biaya_belanja": 0,
+        "total_biaya_belanja": price,
         "id_resto": merchant.merchant_id,
         "pesanan": pesanan,
       });
 
-      // log("$res");
       KSnackbar(context, message: "Order Successfully Placed!");
       await sendNotificationToDrivers(res['data'][0]);
     } catch (e) {
-      KSnackbar(context, message: e, error: true);
+      KSnackbar(context, message: e.toString(), error: true);
     } finally {
       isLoading.value = false;
     }
   }
 
+  // ✅ ENTIRELY REPLACED FUNCTION WITH DETAILED ERROR CHECKS
   Future<void> sendNotificationToDrivers(
     Map<String, dynamic> transactionData,
   ) async {
@@ -310,19 +325,36 @@ class _Merchant_Checkout_UIState extends ConsumerState<Merchant_Checkout_UI> {
       final user = ref.read(userProvider);
       if (user == null) throw "User not logged in!";
 
+      // DETAILED CHECK 1: Validate the user's name
+      if (user.customer_fullname == null) {
+        throw "Error: User's full name (customer_fullname) is null and is required for the notification payload.";
+      }
       transactionData["layanan"] = user.customer_fullname;
       transactionData["layanandesc"] = widget.serviceName;
       transactionData["bid"] = "false";
-      for (DriverModel driver in driversList) {
+      
+      // Use .indexed to get the index for better error reporting
+      for (final (index, driver) in driversList.indexed) {
+        // DETAILED CHECK 2: Validate each driver's registration ID
+        if (driver.reg_id == null || driver.reg_id.isEmpty) {
+          // This will stop execution and show you which driver has the problem.
+          throw "Error: Driver at index $index (ID: ${driver.id}) has a null or empty registration ID (reg_id). Cannot send notification.";
+        }
+
         await NotificationRepo.sendNotification(
           driver.reg_id,
           "New ${widget.serviceName} Order Available",
           transactionData,
         );
       }
+
       ref.read(cartProvider.notifier).clearCart();
+      
+      // ✅ SAFETY CHECK: Ensure the widget is still on screen before navigating
+      if (!context.mounted) return;
+      
       context.go(
-        "/confirmation",
+        "/confirmation2",
         extra:
             Map.from({
               'subtitle': "${widget.serviceName} Booked",
@@ -330,9 +362,15 @@ class _Merchant_Checkout_UIState extends ConsumerState<Merchant_Checkout_UI> {
             }).cast<String, dynamic>(),
       );
     } catch (e) {
-      KSnackbar(context, message: e, error: true);
+      // This will now catch and display our very specific error messages.
+      if (context.mounted) {
+        KSnackbar(context, message: e.toString(), error: true);
+      } else {
+        log("Error in sendNotificationToDrivers but context not mounted: $e");
+      }
     }
   }
+
 
   void fetchAddress() async {
     try {
@@ -375,20 +413,20 @@ class _Merchant_Checkout_UIState extends ConsumerState<Merchant_Checkout_UI> {
                 valueListenable: isFetching,
                 builder:
                     (context, value, child) => Skeletonizer(
-                      enabled: value,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Label(user?.customer_fullname ?? "").regular,
-                          Label(user?.phone_number ?? "").regular,
-                          Label(
-                            displayAddress.isEmpty
-                                ? "address" * 20
-                                : displayAddress,
-                          ).subtitle,
-                        ],
-                      ),
-                    ),
+                  enabled: value,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Label(user?.customer_fullname ?? "").regular,
+                      Label(user?.phone_number ?? "").regular,
+                      Label(
+                        displayAddress.isEmpty
+                            ? "address" * 20
+                            : displayAddress,
+                      ).subtitle,
+                    ],
+                  ),
+                ),
               ),
               height20,
               Label(
@@ -433,8 +471,8 @@ class _Merchant_Checkout_UIState extends ConsumerState<Merchant_Checkout_UI> {
                                       e.promo_price <= 0
                                           ? kCurrencyFormat(e.item_price / 100)
                                           : kCurrencyFormat(
-                                            e.promo_price / 100,
-                                          ),
+                                              e.promo_price / 100,
+                                            ),
                                       weight: 800,
                                     ).regular,
                                   ],
@@ -467,8 +505,8 @@ class _Merchant_Checkout_UIState extends ConsumerState<Merchant_Checkout_UI> {
                         Label(
                           merchant?.distance != null
                               ? secondsToHoursMinutes(
-                                ((merchant!.distance / 4) * 3600),
-                              )
+                                  ((merchant!.distance / 4) * 3600),
+                                )
                               : "-",
                         ).regular,
                       ],
@@ -645,11 +683,11 @@ class _Merchant_Checkout_UIState extends ConsumerState<Merchant_Checkout_UI> {
                                 color: Kolor.secondary,
                                 child:
                                     Label(
-                                      kCurrencyFormat(user?.balance ?? 0),
-                                      weight: 800,
-                                      fontSize: 10,
-                                      color: Colors.white,
-                                    ).regular,
+                                  kCurrencyFormat(user?.balance ?? 0),
+                                  weight: 800,
+                                  fontSize: 10,
+                                  color: Colors.white,
+                                ).regular,
                               ),
                             ],
                           ),
@@ -708,10 +746,10 @@ class _Merchant_Checkout_UIState extends ConsumerState<Merchant_Checkout_UI> {
                 valueListenable: isFetching,
                 builder:
                     (context, value, child) => KButton(
-                      onPressed: value ? null : () => buyNow(),
-                      label: "Confirm Order",
-                      style: KButtonStyle.expanded,
-                    ),
+                  onPressed: value ? null : () => buyNow(),
+                  label: "Confirm Order",
+                  style: KButtonStyle.expanded,
+                ),
               ),
             ],
           ),
@@ -719,4 +757,15 @@ class _Merchant_Checkout_UIState extends ConsumerState<Merchant_Checkout_UI> {
       ),
     );
   }
+}
+
+Widget get div => Divider(height: 30, color: Kolor.border);
+
+Widget disclaimer() {
+  return Padding(
+    padding: const EdgeInsets.symmetric(horizontal: 10),
+    child: Label(
+      "*Please be sure to confirm all order details and price before clicking on confirm order.",
+    ).subtitle,
+  );
 }
